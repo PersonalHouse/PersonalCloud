@@ -11,7 +11,12 @@ Personanl cloud focus on
 **Persistence:** The personal data may be persisitent through one's life time.
 
 ## Current status
-One device could join a personal cloud with/without a shared folder. Folders from all devices in one personal cloud will form a disk/volume. User could access any data in the personal cloud from any device.
+One device could join a personal cloud with/without a shared folder. Folders from all devices in one personal cloud will form a disk/volume. User could access any data in the personal cloud from any device.  
+
+## For Developer
+See the following chart
+![Architecture](https://raw.githubusercontent.com/Personal-Cloud/PersonalCloud/master/Docs/Desc.png "Architecture")
+
 
 ## License
 Personal cloud is licensed under the GPLv3 license. A commercial license is also available. Please contact us for more details.
