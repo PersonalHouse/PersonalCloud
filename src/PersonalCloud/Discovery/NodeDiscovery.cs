@@ -85,7 +85,6 @@ namespace NSPersonalCloud
                     svr.ResponseReceived += _BroadcastListener_DeviceAvailable;
                     svr.OnError += OnError;
                     _SocketProxies.Add(item.Item1, svr);
-                    svr.BeginListeningForBroadcasts();
                 }
             }
         }

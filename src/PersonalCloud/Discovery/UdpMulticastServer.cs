@@ -70,8 +70,9 @@ namespace NSPersonalCloud
             public int Count;
             public Socket So;
             public Func<byte[], int,IPEndPoint, Task<bool>> Callback;
+            public Action<SocketError> ErrorCallback;
         }
-        internal void Listen(Socket so, Func<byte[], int, IPEndPoint, Task<bool>> socketListernCallback)
+        internal void Listen(Socket so, Func<byte[], int, IPEndPoint, Task<bool>> socketListernCallback, Action<SocketError> errorcb)
         {
 #pragma warning disable CA2000 // Dispose objects before losing scope
             var se = GetSocketAsyncEventArgs();
@@ -81,7 +82,8 @@ namespace NSPersonalCloud
                 Buffer =  new byte[4096],
                 Offset = 0,
                 Count = 4096,
-                Callback = socketListernCallback
+                Callback = socketListernCallback,
+                ErrorCallback=errorcb
             };
             se.UserToken = ctx;
             se.SetBuffer(ctx.Buffer, ctx.Offset,ctx.Count- ctx.Offset);
@@ -179,6 +181,7 @@ namespace NSPersonalCloud
                             if (e.SocketError!= SocketError.OperationAborted)
                             {
                                 logger.LogError($"Socket Receive error {e.SocketError}");
+
                             }
                             return;
                         }
@@ -216,7 +219,9 @@ namespace NSPersonalCloud
                             });
                         }else
                         {
+                            var err = e.SocketError;
                             StoreSocketAsyncEventArgs(e);
+                            ctx.ErrorCallback?.Invoke(err);
                         }
                         break;
                     case SocketAsyncOperation.Disconnect:
@@ -240,8 +245,9 @@ namespace NSPersonalCloud
             public int Offset;
             public int Count;
             public Socket So;
+            public Action<SocketError> ErrorCallback;
         }
-        public void SendTo(Socket so, IPEndPoint endp, byte[] data,int off, int count, int repeatcnt, int repeatdelay)
+        public void SendTo(Socket so, IPEndPoint endp, byte[] data,int off, int count, int repeatcnt, int repeatdelay, Action<SocketError> cb)
         {
 //             if (endp.AddressFamily==AddressFamily.InterNetwork)
 //             {
@@ -266,7 +272,8 @@ namespace NSPersonalCloud
                 Data=data,
                 Offset=off,
                 Count=count,
-                So=so
+                So=so,
+                ErrorCallback=cb,
             };
             se.RemoteEndPoint = endp;
             se.SetBuffer(data, off, count);

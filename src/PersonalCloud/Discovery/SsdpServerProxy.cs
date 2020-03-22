@@ -21,7 +21,7 @@ namespace NSPersonalCloud
         public const string Announce = "Announce";
         public const string Response = "Response";
     }
-    class SsdpServerProxy 
+    class SsdpServerProxy :IDisposable
     {
         readonly IPAddress address;
         readonly int interfaceIndex;
@@ -51,7 +51,6 @@ namespace NSPersonalCloud
             address = addr;
             interfaceIndex = infindx;
             udpMulticastServer = svr;
-            listened = false;
             logger = l;
             AnnounceString = "";
             header = new byte[] { 44, 59, 48, 1, 0, 0, 0, };
@@ -62,7 +61,7 @@ namespace NSPersonalCloud
             sendsocket = udpMulticastServer.CreateSocket(address, interfaceIndex, BindPort, address);
             listensocket = udpMulticastServer.CreateSocket(address, interfaceIndex, BindPort,
                 address.AddressFamily==AddressFamily.InterNetwork?IPAddress.Any:IPAddress.IPv6Any);
-
+            BeginListeningForBroadcasts();
         }
 
 
@@ -72,20 +71,10 @@ namespace NSPersonalCloud
         public event EventHandler<string> ResponseReceived;
         public event EventHandler<ErrorCode> OnError;
 
-        bool listened;
-        public void BeginListeningForBroadcasts()
+        void BeginListeningForBroadcasts()
         {
-            lock (this)
-            {
-                if (listened)
-                {
-                    return;
-                }
-                listened = true;
-            }
-            udpMulticastServer.Listen(sendsocket, SocketListernCallback);
-            udpMulticastServer.Listen(listensocket, SocketListernCallback);
-            //udpMulticastServer.Listen(_Sendsocket, SocketListernCallback);
+            udpMulticastServer.Listen(sendsocket, SocketListernCallback, OnSendError);//OnSendError has not be used yet
+            udpMulticastServer.Listen(listensocket, SocketListernCallback, OnSendError);
         }
 
         private Task<bool> SocketListernCallback(byte[] buffer, int datasize, IPEndPoint endPoint)
@@ -275,38 +264,80 @@ namespace NSPersonalCloud
             System.Buffer.BlockCopy(array2, 0, rv, array1.Length, array2.Length);
             return rv;
         }
+        void ReInitSocket()
+        {
+            lock (this)
+            {
+                sendsocket?.Dispose();
+                listensocket?.Dispose();
+
+                sendsocket = udpMulticastServer.CreateSocket(address, interfaceIndex, BindPort, address);
+                listensocket = udpMulticastServer.CreateSocket(address, interfaceIndex, BindPort,
+                    address.AddressFamily == AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any);
+
+            }
+            BeginListeningForBroadcasts();
+        }
         public void SendMessage(byte[] messageData, IPEndPoint endp)
         {
+
             var msg = Combine(header, messageData);
-            udpMulticastServer.SendTo(sendsocket, endp, msg, 0, msg.Length, UdpSendCount,(int)UdpSendDelay.TotalMilliseconds);
+            Socket so;
+
+            lock (this)
+            {
+                so = sendsocket;
+            }
+            udpMulticastServer.SendTo(so, endp, msg, 0, msg.Length,
+                UdpSendCount, (int) UdpSendDelay.TotalMilliseconds, OnSendError);
+        }
+
+        private void OnSendError(SocketError obj)
+        {
+            try
+            {
+                if (!disposedValue)
+                {
+                    ReInitSocket();
+                }
+            }
+            catch
+            {
+            }
         }
 
 
+
         #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
-                if (sendsocket != null)
+                if (!disposedValue)
                 {
-                    udpMulticastServer.CloseSocket(sendsocket);
-                    sendsocket = null;
+                    if (sendsocket != null)
+                    {
+                        udpMulticastServer.CloseSocket(sendsocket);
+                        sendsocket = null;
+                    }
+                    if (listensocket != null)
+                    {
+                        udpMulticastServer.CloseSocket(listensocket);
+                        listensocket = null;
+                    }
                 }
-                if (listensocket != null)
-                {
-                    udpMulticastServer.CloseSocket(listensocket);
-                    listensocket = null;
-                }
+                disposedValue = true;
             }
-
         }
-
 
         public void Dispose()
         {
             Dispose(true);
+            // GC.SuppressFinalize(this);
         }
         #endregion
+
     }
 }
