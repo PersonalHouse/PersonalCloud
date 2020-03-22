@@ -148,50 +148,15 @@ namespace NSPersonalCloud
                 var req = await httpclient.GetAsync(turi).ConfigureAwait(false);
                 if (req.IsSuccessStatusCode)
                 {
-                    var res = JsonConvert.DeserializeObject<List<SSDPPCInfo>>(await req.Content.ReadAsStringAsync().ConfigureAwait(false));
-                    if (res==null)
-                    {
-                        res = new List<SSDPPCInfo>();
-                    }
-                    var pcs = PersonalClouds;
-                    foreach (var pc in pcs)
-                    {
-                        pc.OnNodeUpdate(node,res);
-                        //logger.LogTrace($"{ServerPort}:OnNodeUpdate {pc.NodeDisplayName}");
-                    }
-                    if (res?.Count > 0)
-                    {
-                        foreach (var item in res)
-                        {
-                            var pc = pcs.Where(x => x.Id == item.Id).FirstOrDefault();
-                            if ((pc == null) && (!string.IsNullOrWhiteSpace(item.CodeHash)))
-                            {
-                                var hash = ulong.Parse(item.CodeHash, CultureInfo.InvariantCulture);
-                                var snode = new NodeShareInfo {
-                                    Hash = hash,
-                                    NodeId = node.NodeGuid,
-                                    Url = node.Url,
-                                    PCId = item.Id,
-                                    PCVersion = node.PCVersion,
-                                };
-                                AddShareNode(snode);
-                                logger.LogTrace($"{ServerPort}:A PC is sharing");
-                            }else
-                            {
-                                RemoveSharedNode(node, item.Id);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        RemoveSharedNode(node);
-                    }
+                    logger.LogTrace($"Discovered {turi}");
+                    await OnNewNodeDiscovered(node, req).ConfigureAwait(false);
                     lock (KnownNodes)
                     {
                         if (KnownNodes.ContainsKey(node.NodeGuid))
                         {
                             KnownNodes[node.NodeGuid] = node;
-                        }else
+                        }
+                        else
                         {
                             KnownNodes.Add(node.NodeGuid, node);
                         }
@@ -218,6 +183,49 @@ namespace NSPersonalCloud
                         fetchQueue.Remove(curnodeinfo);
                     }
                 }
+            }
+        }
+
+        private async Task OnNewNodeDiscovered(NodeInfo node, HttpResponseMessage req)
+        {
+            var res = JsonConvert.DeserializeObject<List<SSDPPCInfo>>(await req.Content.ReadAsStringAsync().ConfigureAwait(false));
+            if (res == null)
+            {
+                res = new List<SSDPPCInfo>();
+            }
+            var pcs = PersonalClouds;
+            foreach (var pc in pcs)
+            {
+                pc.OnNodeUpdate(node, res);
+                //logger.LogTrace($"{ServerPort}:OnNodeUpdate {pc.NodeDisplayName}");
+            }
+            if (res?.Count > 0)
+            {
+                foreach (var item in res)
+                {
+                    var pc = pcs.Where(x => x.Id == item.Id).FirstOrDefault();
+                    if ((pc == null) && (!string.IsNullOrWhiteSpace(item.CodeHash)))
+                    {
+                        var hash = ulong.Parse(item.CodeHash, CultureInfo.InvariantCulture);
+                        var snode = new NodeShareInfo {
+                            Hash = hash,
+                            NodeId = node.NodeGuid,
+                            Url = node.Url,
+                            PCId = item.Id,
+                            PCVersion = node.PCVersion,
+                        };
+                        AddShareNode(snode);
+                        logger.LogTrace($"{ServerPort}:A PC is sharing");
+                    }
+                    else
+                    {
+                        RemoveSharedNode(node, item.Id);
+                    }
+                }
+            }
+            else
+            {
+                RemoveSharedNode(node);
             }
         }
 
@@ -510,6 +518,7 @@ namespace NSPersonalCloud
                     }                    
                     await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
                     nodeDiscovery.StartSearch();
+                    logger.LogDebug($"Join {pc.DisplayName}");
                     return pc;
                 }
                 throw new InvalidDeviceResponseException();
@@ -529,10 +538,13 @@ namespace NSPersonalCloud
         //forcerestart will make current http request failed.
         public void StartNetwork(bool forcerestart)
         {
-            if (forcerestart || (WebServer==null)|| (WebServer.State != WebServerState.Listening))
+            if (forcerestart || (WebServer==null)|| (WebServer.State != WebServerState.Listening)|| (nodeDiscovery.State != NodeDiscoveryState.Listening))
             {
                 InitWebServer();
-            }else
+                nodeDiscovery.StopNetwork();
+                CleanKnownNodes();
+            }
+            else
             {
                 using var cts = new CancellationTokenSource(500);
                 try
@@ -542,13 +554,11 @@ namespace NSPersonalCloud
                 catch
                 {
                     InitWebServer();
+                    nodeDiscovery.StopNetwork();
+                    CleanKnownNodes();
                 }
             }
-            if (forcerestart)
-            {
-                nodeDiscovery.StopNetwork();
-                CleanKnownNodes();
-            }
+
             nodeDiscovery.StartMonitoring();
             _ = nodeDiscovery.RePublish(NodeGuid, ServerPort);
             nodeDiscovery.StartSearch();

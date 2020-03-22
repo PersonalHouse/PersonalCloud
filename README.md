@@ -1,5 +1,5 @@
 # Personal Cloud
-Personal cloud connect personal devices together. Our aim is to provide a cloud to help users to access their data from **any device, any where**, and do **any operation**, with privacy, persistence and convenience.   
+Personal cloud connect personal devices together. Our aim is to provide a cloud to help users to access their data from **any device, any where**, and do **any operation**, with privacy, persistence, secure and convenience.   
 For example, one could access a smartphone album from one laptop computer, or backup albums to a laptop/htpc automatically, or view a video file stored on a laptop from a smartphone or tablet.       
 
 ## Comparion with tranditional clouds/cloud storage providers.
@@ -19,6 +19,6 @@ See the following chart
 
 
 ## License
-Personal cloud is licensed under the GPLv3 license. A commercial license is also available. Please contact us for more details.
+Personal cloud is licensed under the [GPLv3](https://raw.githubusercontent.com/Personal-Cloud/PersonalCloud/master/LICENSE "GPLv3")  license. A commercial license is also available. Please contact us for more details.
 
 

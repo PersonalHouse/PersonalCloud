@@ -70,9 +70,10 @@ namespace LocalHosted
         }
 
         [Test]
-        public async Task BigData()
+        public async Task LargeFileTest()
         {
-            long filesize = 100L*1024 *  1024 * 1024;
+            long filesize = 1L*1024 *  1024 * 1024;
+            var testRoot = "I:\\Personal Cloud Test\\";
             int parts = 128;
             var partsize = filesize / parts;
 
@@ -83,7 +84,6 @@ namespace LocalHosted
                 Assert.Fail("filesize/parts must be a multiple of 256");//otherwise you have to rewrite TestStream
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
-            var testRoot = "I:\\Personal Cloud Test\\";
             Directory.CreateDirectory(testRoot);
 
             using var server = new HttpProvider(100, new VirtualFileSystem(testRoot));
