@@ -33,7 +33,7 @@ namespace NSPersonalCloud.FileSharing
         }
         public override bool CanRead => true;
 
-        public override bool CanSeek => true;// stream.CanSeek;
+        public override bool CanSeek => false;// stream.CanSeek;
 
         public override bool CanWrite => false;// stream.CanWrite;
 
