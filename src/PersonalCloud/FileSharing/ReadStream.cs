@@ -43,7 +43,11 @@ namespace NSPersonalCloud.FileSharing
         // otherwise the system tests Seek() method even when no seeking is performed in code.
         // A workaround is used here to check for "certain iOS versions",
         // this is not documented nor fully tested on all affected devices.
+#if DEBUG
+        public override bool CanSeek => Environment.MachineName == "bogon";
+#else
         public override bool CanSeek => Environment.UserName == "mobile";
+#endif
 
         public override bool CanWrite => false;// stream.CanWrite;
 
