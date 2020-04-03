@@ -80,7 +80,7 @@ namespace NSPersonalCloud.RootFS
             pCService?.CleanExpiredNodes();
             return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => new FileSystemEntry {
                 Name = x.Key,
-                Attributes = FileAttributes.Directory
+                Attributes = FileAttributes.Directory | FileAttributes.Device
             }).ToList());
         }
 
