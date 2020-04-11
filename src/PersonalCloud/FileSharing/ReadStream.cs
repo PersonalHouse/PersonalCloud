@@ -33,7 +33,21 @@ namespace NSPersonalCloud.FileSharing
         }
         public override bool CanRead => true;
 
-        public override bool CanSeek => true;// stream.CanSeek;
+        // This method SHOULD return false because the current implementation doesn't support Seek.
+        // On certain iOS versions, this property MUST return true.
+        // A C# Stream that doesn't support Seek becomes an incomplete (abstract) Objective-C class;
+        // which causes runtime error and crash.
+        // (This error cannot be caught, as an abstract Objective-C class cannot be instantiated in code,
+        // the Objective-C runtime gets confused when an abstract object is passed around.)
+        // On the contrary, on some Android devices, a Stream that doesn't support Seek MUST report false;
+        // otherwise the system tests Seek() method even when no seeking is performed in code.
+        // A workaround is used here to check for "certain iOS versions",
+        // this is not documented nor fully tested on all affected devices.
+#if DEBUG
+        public override bool CanSeek => Environment.MachineName == "bogon";
+#else
+        public override bool CanSeek => Environment.UserName == "mobile";
+#endif
 
         public override bool CanWrite => false;// stream.CanWrite;
 

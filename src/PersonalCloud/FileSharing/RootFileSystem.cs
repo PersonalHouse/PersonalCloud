@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
+using NSPersonalCloud.FileSharing;
 using NSPersonalCloud.Interfaces.Errors;
 using NSPersonalCloud.Interfaces.FileSystem;
 
@@ -78,9 +78,13 @@ namespace NSPersonalCloud.RootFS
                 else throw new DeviceNotFoundException();
             }
             pCService?.CleanExpiredNodes();
-            return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => new FileSystemEntry {
-                Name = x.Key,
-                Attributes = FileAttributes.Directory
+            return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => {
+                var entry = new FileSystemEntry {
+                    Name = x.Key,
+                    Attributes = FileAttributes.Directory | FileAttributes.Device
+                };
+                if (x.Value.GetType() == typeof(TopFolderClient)) entry.Attributes = entry.Attributes | FileAttributes.ReadOnly;
+                return entry;
             }).ToList());
         }
 
