@@ -1,0 +1,21 @@
+.rc-collapse-content
+{
+    padding: 0 1px;
+}
+.playbtn
+{
+    left: 50%;    
+    position: absolute;     
+    top: 50%;   
+    -webkit-transition: opacity 0.3s ease 0s;
+    -o-transition: opacity 0.3s ease 0s;
+    transition: opacity 0.3s ease 0s;
+    height: 48px;
+    margin-left: -24px;
+    margin-top: -24px;
+    opacity: 0.8;
+    width: 48px;
+}
+.vimg{
+    position: relative;
+}

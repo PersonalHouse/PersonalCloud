@@ -46,7 +46,7 @@ namespace NSPersonalCloud
     public class PCLocalService : IDisposable, IPCService
     {
         readonly ILoggerFactory loggerFactory;
-        readonly ILogger  logger;
+        readonly ILogger logger;
 
         private IConfigStorage ConfigStorage { get; }
         private VirtualFileSystem FileSystem { get; }
@@ -86,7 +86,7 @@ namespace NSPersonalCloud
             httpclient.Timeout = TimeSpan.FromSeconds(10);
             nodeDiscovery = new NodeDiscovery(logfac);
             nodeDiscovery.OnNodeAdded += NodeDiscovery_OnNodeAdded;
-            nodeDiscovery.OnError += (o,e) => OnError?.Invoke(this, new ServiceErrorEventArgs(e));
+            nodeDiscovery.OnError += (o, e) => OnError?.Invoke(this, new ServiceErrorEventArgs(e));
             fetchQueue = new List<FetchQueueItem>();
 
             var cfg = LoadConfiguration();
@@ -96,11 +96,22 @@ namespace NSPersonalCloud
 #pragma warning restore CA1305 // Specify IFormatProvider
 
             LoadPCList();
-            fetchCloudInfo = new ActionBlock<NodeInfo>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism=3});
+            fetchCloudInfo = new ActionBlock<NodeInfo>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 3 });
             InitWebServer();
 
 
         }
+
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+        async Task EmbedIOResponseSerializerCallback(IHttpContext context, object? data)
+#pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+        {
+            context.Response.ContentType = MimeType.Json;
+            using var text = context.OpenResponseText(new UTF8Encoding(false));
+            await text.WriteAsync(System.Text.Json.JsonSerializer.Serialize(data,
+                new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
+        }
+
         void InitWebServer()
         {
             if (WebServer!=null)
@@ -108,11 +119,15 @@ namespace NSPersonalCloud
                 WebServer.Dispose();
                 WebServer = null;
             }
+            var curpath = Path.GetDirectoryName(typeof(PCLocalService).Assembly.Location);
             WebServer = new WebServer(ServerPort);
             WebServer = WebServer
                 .WithModule(new PCWebServerAuth("/api/share", this))
                 .WithWebApi("SSDP", "/clouds", module => module.WithController(CreateSSDPServiceController))
-                .WithWebApi("Share", "/api/share", module => module.WithController(CreateShareController));
+                .WithWebApi("Share", "/api/share", module => module.WithController(CreateShareController))
+                .WithWebApi("Album", "/api/Apps/album", EmbedIOResponseSerializerCallback, module => module.WithController(typeof(Plugins.Album.AlbumWebController)))
+                .WithStaticFolder("/AppsStatic",Path.Combine(curpath, "Apps","Static"),false)
+                ;
             WebServer.Start();
 
         }
