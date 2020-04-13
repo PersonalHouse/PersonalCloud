@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -24,7 +25,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
         public ValueTask<List<FileSystemEntry>> EnumerateChildrenAsync(string filePath, CancellationToken cancellation = default)
         {
-            filePath = filePath?.Replace("\\", "/", StringComparison.InvariantCulture).Trim('/') ?? "";
+            filePath = filePath?.Replace('\\', '/').Trim('/') ?? "";
             if (filePath.Length > 0)
             {
                 filePath += "/";
@@ -47,7 +48,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
             foreach (var item in items.ObjectSummaries)
             {
-                if (item.Key.EndsWith("/", StringComparison.InvariantCulture))
+                if (item.Key.EndsWith('/'))
                 {
                     string sFolderName = item.Key.Substring(filePath.Length).TrimEnd('/');
                     if (!string.IsNullOrEmpty(sFolderName))
@@ -89,7 +90,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
         {
             ObjectMetadata fileMetadata = null;
 
-            filePath = filePath?.Replace("\\", "/", StringComparison.InvariantCulture).TrimStart('/');
+            filePath = filePath?.Replace('\\', '/').TrimStart('/');
             if (string.IsNullOrEmpty(filePath))
             {
                 // Root Folder
@@ -101,7 +102,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             }
             var client = new OssClient(_OssConfig.OssEndpoint, _OssConfig.AccessKeyId, _OssConfig.AccessKeySecret);
 
-            if (filePath.EndsWith("/", StringComparison.InvariantCulture))
+            if (filePath.EndsWith('/'))
             {
                 if (_IsDirectory(filePath, client))
                 {
@@ -147,7 +148,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
         private bool _IsDirectory(string filePath, OssClient client)
         {
-            if (!filePath.EndsWith("/", StringComparison.InvariantCulture)) filePath += "/";
+            if (!filePath.EndsWith('/')) filePath += "/";
 
             var result = client.ListObjects(new ListObjectsRequest(_OssConfig.BucketName) {
                 Prefix = filePath,
@@ -160,7 +161,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
         private string GetRelativeName(string path)
         {
-            path = path?.Replace("\\", "/", StringComparison.InvariantCulture).Trim('/');
+            path = path?.Replace('\\', '/').Trim('/');
             if (!string.IsNullOrEmpty(path))
             {
                 int nPos = path.LastIndexOf('/');
@@ -181,7 +182,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
         public ValueTask<Stream> ReadFileAsync(string fileName, CancellationToken cancellation = default)
         {
-            fileName = fileName?.Replace("\\", "/", StringComparison.InvariantCulture).Trim('/');
+            fileName = fileName?.Replace('\\', '/').Trim('/');
             var client = new OssClient(_OssConfig.OssEndpoint, _OssConfig.AccessKeyId, _OssConfig.AccessKeySecret);
             var req = new GetObjectRequest(_OssConfig.BucketName, fileName);
             var fileObj = client.GetObject(req);
