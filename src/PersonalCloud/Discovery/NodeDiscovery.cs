@@ -205,12 +205,20 @@ namespace NSPersonalCloud
 
         private void OnTimer(object state)
         {
-            lock (_SocketProxies)
+            // Alternative: Remove this try-catch and correct ObjectDisposedException in code logic.
+            try
             {
-                foreach (var item in _SocketProxies)
+                lock (_SocketProxies)
                 {
-                    item.Value.SendAnnounce();
+                    foreach (var item in _SocketProxies)
+                    {
+                        item.Value.SendAnnounce();
+                    }
                 }
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Timer callback finished with error.");
             }
         }
 
@@ -249,9 +257,9 @@ namespace NSPersonalCloud
                         item.Value.AnnounceString = JsonConvert.SerializeObject(node);
 
                     }
-                    catch (Exception e)
+                    catch (Exception exception)
                     {
-                        logger.LogError($"Error {e.Message} {e.StackTrace}");
+                        logger.LogError(exception, "Error during publishing for an item.");
                     }
                 }
             }
@@ -313,14 +321,14 @@ namespace NSPersonalCloud
 
                 if ((node==null)||string.IsNullOrWhiteSpace(node.NodeGuid))
                 {
-                    logger.LogError($"_BroadcastListener_DeviceAvailable receive invalid content {content}");
+                    logger.LogError("_BroadcastListener_DeviceAvailable receive invalid content: {0}", content);
                     return;
                 }
                 OnNodeAdded?.Invoke(node);
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                logger.LogError($"{ex.Message} {ex.StackTrace}");
+                logger.LogError(exception, "Error processing content from available device.");
             }
         }
 
