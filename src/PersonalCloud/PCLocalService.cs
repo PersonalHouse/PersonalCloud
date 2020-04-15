@@ -20,6 +20,7 @@ using Newtonsoft.Json;
 
 using NSPersonalCloud.Config;
 using NSPersonalCloud.FileSharing;
+using NSPersonalCloud.FileSharing.Aliyun;
 using NSPersonalCloud.Interfaces.Errors;
 
 using Standart.Hash.xxHash;
@@ -96,6 +97,10 @@ namespace NSPersonalCloud
 #pragma warning restore CA1305 // Specify IFormatProvider
 
             LoadPCList();
+            foreach (var item in _PersonalClouds)
+            {
+                item.ResyncClientList();
+            }
             fetchCloudInfo = new ActionBlock<NodeInfo>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 3 });
             InitWebServer();
 
@@ -409,12 +414,65 @@ namespace NSPersonalCloud
             var l = loggerFactory.CreateLogger("PersonalCloud");
             _PersonalClouds = saved.Select(x => x.ToPersonalCloud(l,this)).ToList();
         }
+
+        public List<StorageProviderInstance> GetStorageProviderInstances(string cloudId)
+        {
+            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+
+            if (personalCloud != null)
+            {
+                return personalCloud.StorageProviderInstances;
+            }
+            else
+            {
+                throw new NoSuchCloudException();
+            }
+        }
+
+        public bool AddStorageProvider(string cloudId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility, bool saveChanges = true)
+        {
+            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+
+            if (personalCloud != null)
+            {
+                bool haveChanges = personalCloud.AddStorageProvider(nodeName, ossConfig, visibility);
+                if (haveChanges && saveChanges)
+                {
+                    SavePCList();
+                }
+                return haveChanges;
+            }
+            else
+            {
+                throw new NoSuchCloudException();
+            }
+        }
+
+        public bool RemoveStorageProvider(string cloudId, string nodeName, bool saveChanges = true)
+        {
+            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+
+            if (personalCloud != null)
+            {
+                bool haveChanges = personalCloud.RemoveStorageProvider(nodeName);
+                if (haveChanges && saveChanges)
+                {
+                    SavePCList();
+                }
+                return haveChanges;
+            }
+            else
+            {
+                throw new NoSuchCloudException();
+            }
+        }
+
         #endregion
 
         public async Task<PersonalCloud> CreatePersonalCloud(string displayName, string nodedisplaryname)
         {
             var l = loggerFactory.CreateLogger("PersonalCloud");
-            var pc = new PersonalCloud(l,this) {
+            var pc = new PersonalCloud(l,this, null) {
                 Id = Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture),
                 UpdateTimeStamp = DateTime.UtcNow.ToFileTime(),
                 NodeDisplayName = nodedisplaryname,

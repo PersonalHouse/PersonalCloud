@@ -16,8 +16,11 @@ namespace NSPersonalCloud.FileSharing.Aliyun
     {
         private readonly OssConfig _OssConfig;
 
-        public AliyunOSSFileSystemClient(OssConfig config)
+        public Guid RuntimeId { get; }
+
+        public AliyunOSSFileSystemClient(Guid runtimeId, OssConfig config)
         {
+            RuntimeId = runtimeId;
             _OssConfig = config;
         }
 

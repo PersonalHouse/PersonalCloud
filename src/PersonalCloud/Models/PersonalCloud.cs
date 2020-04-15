@@ -11,6 +11,8 @@ using NSPersonalCloud.RootFS;
 using NSPersonalCloud.FileSharing;
 using System.Globalization;
 using System.Threading.Tasks;
+using NSPersonalCloud.FileSharing.Aliyun;
+using Newtonsoft.Json;
 
 namespace NSPersonalCloud
 {
@@ -19,10 +21,28 @@ namespace NSPersonalCloud
     {
         readonly ILogger logger;
 
-        internal PersonalCloud(ILogger l, IPCService pcsrv)
+        internal PersonalCloud(ILogger l, IPCService pcsrv, List<StorageProviderInfo> storageProviderInfos)
         {
             CachedNodes = new List<NodeInfoForPC>();
             RootFS = new RootFileSystem(pcsrv);
+            var instances = storageProviderInfos?
+                .Select(x => {
+                    try
+                    {
+                        if (x.Type == "Aliyun-OSS")
+                        {
+                            return new StorageProviderInstance_AliyunOSS(x);
+                        }
+                    }
+                    catch
+                    {
+                        // Ignore any errors
+                    }
+                    return null;
+                })
+                .Where(x => x != null)
+                .ToList<StorageProviderInstance>();
+            StorageProviderInstances = instances ?? new List<StorageProviderInstance>();
             logger = l;
         }
 
@@ -36,6 +56,8 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
+
+        internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
@@ -54,6 +76,88 @@ namespace NSPersonalCloud
         }
 
         public RootFileSystem RootFS { get; private set; }
+
+        public bool AddStorageProvider(string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (ossConfig == null) throw new ArgumentNullException(nameof(ossConfig));
+
+            lock (StorageProviderInstances)
+            {
+                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
+                {
+                    var instance = new StorageProviderInstance(new StorageProviderInfo {
+                        Type = "Aliyun-OSS",
+                        Name = nodeName,
+                        Visibility = visibility,
+                        Settings = JsonConvert.SerializeObject(ossConfig)
+                    });
+                    StorageProviderInstances.Add(instance);
+                    ResyncClientListToStorageProviderInstances();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public bool RemoveStorageProvider(string nodeName)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+
+            lock (StorageProviderInstances)
+            {
+                var item = StorageProviderInstances
+                    .Where(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0)
+                    .FirstOrDefault();
+                if (item != null)
+                {
+                    StorageProviderInstances.Remove(item);
+                    ResyncClientListToStorageProviderInstances();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public void ResyncClientList()
+        {
+            lock (StorageProviderInstances)
+            {
+                ResyncClientListToStorageProviderInstances();
+            }
+        }
+
+        private void ResyncClientListToStorageProviderInstances()
+        {
+            List<Guid> skips = new List<Guid>();
+            List<string> removes = new List<string>();
+            foreach (var client in RootFS.ClientList)
+            {
+                if (client.Value is StorageProviderInstance instance)
+                {
+                    if (StorageProviderInstances.Any(x => x.RuntimeId == instance.RuntimeId))
+                    {
+                        skips.Add(instance.RuntimeId);
+                    }
+                    else
+                    {
+                        removes.Add(client.Key);
+                    }
+                }
+            }
+            foreach (var item in removes)
+            {
+                RootFS.ClientList.TryRemove(item, out _);
+            }
+            foreach (var item in StorageProviderInstances)
+            {
+                if (skips.Contains(item.RuntimeId)) continue;
+                if (item.ProviderInfo.Type == "Aliyun-OSS" && item is StorageProviderInstance_AliyunOSS instance)
+                {
+                    InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, instance.OssConfig));
+                }
+            }
+        }
 
         internal void OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
         {
@@ -118,6 +222,36 @@ namespace NSPersonalCloud
                     {
                     }
                 });
+            }
+        }
+
+        public void InsertRootFS(string nodeName, AliyunOSSFileSystemClient client)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (client == null) throw new ArgumentNullException(nameof(client));
+
+            string nm = nodeName;
+            string key = nm;
+            if (RootFS.ClientList.ContainsKey(nm))
+            {
+                //user input duplicated name
+                for (int i = 2; i < int.MaxValue; i++)
+                {
+                    key = $"{nm}({i})";
+                    if (RootFS.ClientList.ContainsKey(key))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        RootFS.ClientList.TryAdd(key, client);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                RootFS.ClientList.TryAdd(key, client);
             }
         }
 

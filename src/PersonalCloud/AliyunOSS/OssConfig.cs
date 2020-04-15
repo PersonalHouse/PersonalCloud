@@ -12,6 +12,14 @@ namespace NSPersonalCloud.FileSharing.Aliyun
         public string AccessKeySecret { get; set; }
 
         public string BucketName { get; set; }
+
+        public bool IsValid()
+        {
+            return !string.IsNullOrWhiteSpace(OssEndpoint)
+                && !string.IsNullOrWhiteSpace(AccessKeyId)
+                && !string.IsNullOrWhiteSpace(AccessKeySecret)
+                && !string.IsNullOrWhiteSpace(BucketName);
+        }
     }
 
     public static class OssConfigExtensions
