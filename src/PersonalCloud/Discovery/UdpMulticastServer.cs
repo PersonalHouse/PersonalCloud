@@ -203,7 +203,7 @@ namespace NSPersonalCloud
                         var ctx = (SocketSendContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
-                            logger.LogError($"Socket Send error {e.SocketError}. From {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}.");
+                           logger.LogError($"Socket Send error {e.SocketError}. From {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}.");
                         }
                         if (ctx != null)
                         {

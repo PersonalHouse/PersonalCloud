@@ -191,7 +191,7 @@ namespace NSPersonalCloud
             {
                 if (exception.HResult != -2147467259)
                 {
-                    logger.LogError(exception, "Error getting info for node: {0}", node.Url);
+                    logger.LogError(exception, $"Error getting info for node: {node.Url}");
                 }
             }
             finally
