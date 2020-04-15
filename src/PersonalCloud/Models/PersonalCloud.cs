@@ -1,23 +1,23 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Linq;
-using Microsoft.Extensions.Logging;
-using NSPersonalCloud.Interfaces.Cloud;
-using NSPersonalCloud.RootFS;
-using NSPersonalCloud.FileSharing;
-using System.Globalization;
 using System.Threading.Tasks;
-using NSPersonalCloud.FileSharing.Aliyun;
+
+using Microsoft.Extensions.Logging;
+
 using Newtonsoft.Json;
+
+using NSPersonalCloud.FileSharing;
+using NSPersonalCloud.FileSharing.Aliyun;
+using NSPersonalCloud.RootFS;
 
 namespace NSPersonalCloud
 {
-
-    public class PersonalCloud : ICloud, IDisposable
+    public class PersonalCloud : IDisposable
     {
         readonly ILogger logger;
 
@@ -152,7 +152,7 @@ namespace NSPersonalCloud
             foreach (var item in StorageProviderInstances)
             {
                 if (skips.Contains(item.RuntimeId)) continue;
-                if (item.ProviderInfo.Type == "Aliyun-OSS" && item is StorageProviderInstance_AliyunOSS instance)
+                if (item.ProviderInfo.Type == StorageProviderInstance.TypeAliYun && item is StorageProviderInstance_AliyunOSS instance)
                 {
                     InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, instance.OssConfig));
                 }
