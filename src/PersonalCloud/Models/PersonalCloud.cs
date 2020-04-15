@@ -29,7 +29,7 @@ namespace NSPersonalCloud
                 .Select(x => {
                     try
                     {
-                        if (x.Type == "Aliyun-OSS")
+                        if (x.Type == StorageProviderInstance.TypeAliYun)
                         {
                             return new StorageProviderInstance_AliyunOSS(x);
                         }
@@ -86,8 +86,8 @@ namespace NSPersonalCloud
             {
                 if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
                 {
-                    var instance = new StorageProviderInstance(new StorageProviderInfo {
-                        Type = "Aliyun-OSS",
+                    var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
+                        Type = StorageProviderInstance.TypeAliYun,
                         Name = nodeName,
                         Visibility = visibility,
                         Settings = JsonConvert.SerializeObject(ossConfig)
@@ -216,7 +216,7 @@ namespace NSPersonalCloud
                 Task.Run(() => {
                     try
                     {
-                        OnNodeChangedEvent?.Invoke(this, new EventArgs());
+                        OnNodeChangedEvent?.Invoke(this, EventArgs.Empty);
                     }
                     catch
                     {

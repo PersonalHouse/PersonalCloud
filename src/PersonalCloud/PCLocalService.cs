@@ -131,7 +131,7 @@ namespace NSPersonalCloud
                 .WithWebApi("SSDP", "/clouds", module => module.WithController(CreateSSDPServiceController))
                 .WithWebApi("Share", "/api/share", module => module.WithController(CreateShareController))
                 .WithWebApi("Album", "/api/Apps/album", EmbedIOResponseSerializerCallback, module => module.WithController(typeof(Plugins.Album.AlbumWebController)))
-                .WithStaticFolder("/AppsStatic",Path.Combine(curpath, "Apps","Static"),false)
+                // .WithStaticFolder("/AppsStatic",Path.Combine(curpath, "Apps","Static"),false)
                 ;
             WebServer.Start();
 
@@ -431,7 +431,7 @@ namespace NSPersonalCloud
 
         public bool AddStorageProvider(string cloudId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility, bool saveChanges = true)
         {
-            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
 
             if (personalCloud != null)
             {
@@ -450,7 +450,7 @@ namespace NSPersonalCloud
 
         public bool RemoveStorageProvider(string cloudId, string nodeName, bool saveChanges = true)
         {
-            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
 
             if (personalCloud != null)
             {

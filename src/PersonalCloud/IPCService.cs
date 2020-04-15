@@ -4,8 +4,10 @@ namespace NSPersonalCloud
 {
     public interface IPCService
     {
-        public IReadOnlyList<PersonalCloud> PersonalClouds { get; }
+        IReadOnlyList<PersonalCloud> PersonalClouds { get; }
 
-        public void CleanExpiredNodes();
+        void CleanExpiredNodes();
+
+        bool RemoveStorageProvider(string cloudId, string nodeName, bool saveChanges = true);
     }
 }

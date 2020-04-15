@@ -6,7 +6,7 @@ using NSPersonalCloud.FileSharing.Aliyun;
 
 namespace NSPersonalCloud
 {
-    public class StorageProviderInstance
+    public abstract class StorageProviderInstance
     {
         public const string TypeAliYun = "Aliyun-OSS";
 
