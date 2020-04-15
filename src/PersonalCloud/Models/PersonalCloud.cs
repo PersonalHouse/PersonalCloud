@@ -133,7 +133,7 @@ namespace NSPersonalCloud
             List<string> removes = new List<string>();
             foreach (var client in RootFS.ClientList)
             {
-                if (client.Value is StorageProviderInstance instance)
+                if (client.Value is AliyunOSSFileSystemClient instance)
                 {
                     if (StorageProviderInstances.Any(x => x.RuntimeId == instance.RuntimeId))
                     {
