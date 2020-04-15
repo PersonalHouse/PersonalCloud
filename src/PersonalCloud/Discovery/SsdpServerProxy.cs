@@ -131,9 +131,9 @@ namespace NSPersonalCloud
 
                 return Task.FromResult(true);
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                logger.LogError($"Exception in SsdpServerProxy:{e.Message} {e.StackTrace}");
+                logger.LogError(exception, "Exception in SsdpServerProxy.");
                 return Task.FromResult(true);
             }
         }

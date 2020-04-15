@@ -187,11 +187,11 @@ namespace NSPersonalCloud
 
                 }
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                if (e.HResult != -2147467259)
+                if (exception.HResult != -2147467259)
                 {
-                    logger.LogError($"Error: {e.Message} {node?.Url} ");
+                    logger.LogError(exception, "Error getting info for node: {0}", node.Url);
                 }
             }
             finally
@@ -300,9 +300,9 @@ namespace NSPersonalCloud
                 }
                 fetchCloudInfo.Post(null);
             }
-            catch (Exception e)
+            catch (Exception exception)
             {
-                logger.LogError($"{e.Message} {e.StackTrace}");
+                logger.LogError(exception, "Error adding node from discovery.");
             }
         }
         public void CleanExpiredNodes()

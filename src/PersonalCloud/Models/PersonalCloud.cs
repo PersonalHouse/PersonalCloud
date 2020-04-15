@@ -469,7 +469,7 @@ namespace NSPersonalCloud
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Exception when getting EncryptedName:{e.Message} {e.StackTrace}");
+                    logger.LogError(e, "Exception getting EncryptedName.");
                     throw;
                 }
             }

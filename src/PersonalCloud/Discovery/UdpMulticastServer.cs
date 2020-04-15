@@ -56,9 +56,9 @@ namespace NSPersonalCloud
                 }
                 return so;
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                logger.LogError($"{ex.Message}");
+                logger.LogError(exception, "Error creating Socket.");
                 throw;
             }
         }
@@ -128,9 +128,9 @@ namespace NSPersonalCloud
                     });
                 }
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                logger.LogError($"Exception in UdpMulticastServer:{ex.Message} {ex.StackTrace}");
+                logger.LogError(exception, "Exception in UdpMulticastServer.");
             }
         }
 
@@ -180,7 +180,7 @@ namespace NSPersonalCloud
                         {
                             if (e.SocketError!= SocketError.OperationAborted)
                             {
-                                logger.LogError($"Socket Receive error {e.SocketError}");
+                                logger.LogError($"Socket Receive error: {e.SocketError}.");
 
                             }
                             return;
@@ -203,7 +203,7 @@ namespace NSPersonalCloud
                         var ctx = (SocketSendContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
-                            logger.LogError($"Socket Send error {e.SocketError},from {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}");
+                            logger.LogError($"Socket Send error {e.SocketError}. From {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}.");
                         }
                         if (ctx != null)
                         {
@@ -231,9 +231,9 @@ namespace NSPersonalCloud
                 }
                 return;
             }
-            catch (Exception ee)
+            catch (Exception exception)
             {
-                logger.LogError($"Exception in UdpMulticastServer:{ee.Message} {ee.StackTrace}");
+                logger.LogError(exception, "Exception in UdpMulticastServer.");
             }
         }
 
