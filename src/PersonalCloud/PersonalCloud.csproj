@@ -18,10 +18,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Apps\Album\AlbumComon\AlbumComon.csproj" />
     <ProjectReference Include="..\Interface\Interface.csproj" />
+    <ProjectReference Include="..\StorageClient.Aliyun\src\StorageClient.Aliyun\StorageClient.Aliyun.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aliyun.OSS.SDK.NetCore" Version="2.9.1" />
     <PackageReference Include="EmbedIO" Version="3.4.3" />
     <PackageReference Include="Microsoft.CodeAnalysis.FxCopAnalyzers" Version="2.9.8">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

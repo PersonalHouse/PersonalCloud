@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -15,10 +16,11 @@ namespace NSPersonalCloud.RootFS
     {
         public ConcurrentDictionary<string, IFileSystem> ClientList { get; private set; }
 
-        readonly IPCService pCService;
+        private IPCService Service { get; }
+
         public RootFileSystem(IPCService pcsrv)
         {
-            pCService = pcsrv;
+            Service = pcsrv;
             ClientList = new ConcurrentDictionary<string, IFileSystem>();
         }
 
@@ -77,7 +79,7 @@ namespace NSPersonalCloud.RootFS
                 }
                 else throw new DeviceNotFoundException();
             }
-            pCService?.CleanExpiredNodes();
+            Service?.CleanExpiredNodes();
             return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => {
                 var entry = new FileSystemEntry {
                     Name = x.Key,
@@ -253,6 +255,14 @@ namespace NSPersonalCloud.RootFS
             var segments = SplitPath(path);
             if (segments.Length > 0)
             {
+                // Special case: Removing storage provider.
+                if (segments.Length == 1)
+                {
+                    var cloud = Service.PersonalClouds.First(x => x.RootFS == this);
+                    Service.RemoveStorageProvider(cloud.Id, segments[0]);
+                    return default;
+                }
+
                 if (ClientList.TryGetValue(segments[0], out var device))
                 {
                     var deviceRelativePath = string.Join(Path.AltDirectorySeparatorChar, segments.TakeLast(segments.Length - 1));
