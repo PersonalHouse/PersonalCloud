@@ -44,7 +44,7 @@ namespace NSPersonalCloud.FileSharing
         // A workaround is used here to check for "certain iOS versions",
         // this is not documented nor fully tested on all affected devices.
 #if DEBUG
-        public override bool CanSeek => Environment.MachineName == "bogon";
+        public override bool CanSeek => Environment.MachineName == "bogon" || Environment.UserName == "mobile";
 #else
         public override bool CanSeek => Environment.UserName == "mobile";
 #endif
