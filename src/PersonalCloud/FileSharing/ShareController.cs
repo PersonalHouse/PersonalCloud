@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Security;
 using System.Text;
@@ -23,9 +24,10 @@ namespace NSPersonalCloud
     public partial class ShareController : WebApiController
     {
         private readonly IFileSystem fileSystem;
-
-        public ShareController(IFileSystem vfs)
+        IPCService pCService;
+        public ShareController(IFileSystem vfs, IPCService pcService)
         {
+            pCService = pcService;
             fileSystem = vfs;
         }
 
@@ -589,6 +591,35 @@ namespace NSPersonalCloud
             catch (DirectoryNotFoundException)
             {
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
+            }
+            catch
+            {
+                await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
+            }
+        }
+
+
+
+        [Route(HttpVerbs.Get, "/cloud")]
+        public async Task GetCloudInfo()
+        {
+            try
+            {
+                var pcid = HttpContext.Request.Headers[AuthDefinitions.AuthenticationPCId].Trim();
+                if (string.IsNullOrWhiteSpace(pcid))
+                {
+                    await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
+                    return;
+                }
+
+                var pc = pCService.PersonalClouds.First(x => x.Id == pcid);
+                if (pc == null)
+                {
+                    await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
+                    return;
+                }
+                var pcinfo = PersonalCloudInfo.FromPersonalCloud(pc);
+                SendJsonResponse(pcinfo);
             }
             catch
             {

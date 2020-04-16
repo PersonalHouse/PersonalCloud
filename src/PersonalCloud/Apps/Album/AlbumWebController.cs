@@ -70,7 +70,7 @@ namespace NSPersonalCloud.Plugins.Album
                     rs.Seek(start, SeekOrigin.Begin);
                     HttpContext.Response.StatusCode = 206;
                     HttpContext.Response.Headers["Content-Range"] = $"bytes {start}-{upperBound}/{rs.Length}";
-                    HttpContext.Response.ContentLength64 = upperBound- start+1;
+                    //HttpContext.Response.ContentLength64 = upperBound- start+1;
                 }
                 else
                 {

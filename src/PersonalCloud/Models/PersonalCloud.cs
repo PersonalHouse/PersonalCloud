@@ -11,6 +11,7 @@ using NSPersonalCloud.RootFS;
 using NSPersonalCloud.FileSharing;
 using System.Globalization;
 using System.Threading.Tasks;
+using NSPersonalCloud.Interfaces.Apps;
 
 namespace NSPersonalCloud
 {
@@ -36,7 +37,8 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
-
+        List<AppLauncher> Apps { get;  }
+        
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] MasterKey { get; set; }

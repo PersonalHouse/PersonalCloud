@@ -50,7 +50,7 @@ namespace NSPersonalCloud.FileSharing
 
 
                 var pcid = context.Request.Headers[AuthDefinitions.AuthenticationPCId].Trim();
-                if (string.IsNullOrWhiteSpace(hashstr))
+                if (string.IsNullOrWhiteSpace(pcid))
                 {
                     return Task.FromResult(Auth.NoUser);
                 }

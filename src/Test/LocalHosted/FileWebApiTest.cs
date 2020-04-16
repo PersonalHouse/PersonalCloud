@@ -36,7 +36,7 @@ namespace LocalHosted
 
         public void Start() => Server?.Start();
 
-        private ShareController CreateController() => new ShareController(FileSystem);
+        private ShareController CreateController() => new ShareController(FileSystem,null);
 
         public void Dispose()
         {

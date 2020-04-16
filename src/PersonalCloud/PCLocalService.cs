@@ -69,7 +69,7 @@ namespace NSPersonalCloud
         WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
-        public ShareController CreateShareController() => new ShareController(FileSystem);
+        public ShareController CreateShareController() => new ShareController(FileSystem,this);
 
         public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem)
         {
