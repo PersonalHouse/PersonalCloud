@@ -21,6 +21,7 @@ using Newtonsoft.Json;
 using NSPersonalCloud.Config;
 using NSPersonalCloud.FileSharing;
 using NSPersonalCloud.FileSharing.Aliyun;
+using NSPersonalCloud.Interfaces.Apps;
 using NSPersonalCloud.Interfaces.Errors;
 
 using Standart.Hash.xxHash;
@@ -136,6 +137,9 @@ namespace NSPersonalCloud
             WebServer.Start();
 
         }
+
+        #region Node discovery
+
         async Task GetNodeClodeInfo(NodeInfo _)
         {
             NodeInfo node = null;
@@ -356,6 +360,7 @@ namespace NSPersonalCloud
                 }
             }
         }
+        #endregion
         #region Config
 
         private ServiceConfiguration LoadConfiguration()
@@ -467,6 +472,36 @@ namespace NSPersonalCloud
             }
         }
 
+        #endregion
+
+        #region Apps
+
+        List<IAppManager> GetAppMgrs()
+        {
+            return new List<IAppManager> { new Apps.Album.AlbumManager() };
+        }
+        public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
+        {
+            return SetAppMgrConfig(pcid, "Album", JsonConvert.SerializeObject(albcongs));
+        }
+
+        public async Task SetAppMgrConfig(string pcid,string appid,string jsonconfig)
+        {
+
+        }
+        /// <summary>
+        /// install apps. may be called multiple times
+        /// </summary>
+        /// <param name="webstaticpath"></param>
+        /// <returns></returns>
+        public async Task InstallApps(string webstaticpath)
+        {
+            var lis = GetAppMgrs();
+            foreach (var item in lis)
+            {
+                await item.InstallWebStatiFiles(webstaticpath).ConfigureAwait(false);
+            }
+        }
         #endregion
 
         public async Task<PersonalCloud> CreatePersonalCloud(string displayName, string nodedisplaryname)

@@ -13,10 +13,12 @@ using Newtonsoft.Json;
 
 using NSPersonalCloud.FileSharing;
 using NSPersonalCloud.FileSharing.Aliyun;
+using NSPersonalCloud.Interfaces.Apps;
 using NSPersonalCloud.RootFS;
 
 namespace NSPersonalCloud
 {
+
     public class PersonalCloud : IDisposable
     {
         readonly ILogger logger;
@@ -56,7 +58,7 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
-
+        List<AppLauncher> Apps { get;  }
         internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
         //Cloud password

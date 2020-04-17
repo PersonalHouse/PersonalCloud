@@ -16,6 +16,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Apps\Album\AlbumApp\AlbumApp.csproj" />
     <ProjectReference Include="..\Apps\Album\AlbumComon\AlbumComon.csproj" />
     <ProjectReference Include="..\Interface\Interface.csproj" />
     <ProjectReference Include="..\StorageClient.Aliyun\src\StorageClient.Aliyun\StorageClient.Aliyun.csproj" />
@@ -48,7 +49,7 @@
     <!-- Include the newly-built files in the publish output -->
     <ItemGroup>
       <DistFiles Include="Apps\Static\**" />
-      <ResolvedFileToPublish Include="@(DistFiles-&gt;'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
         <RelativePath>%(DistFiles.Identity)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
