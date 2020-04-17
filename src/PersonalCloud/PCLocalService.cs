@@ -485,6 +485,11 @@ namespace NSPersonalCloud
             return SetAppMgrConfig(pcid, "Album", JsonConvert.SerializeObject(albcongs));
         }
 
+        public async  Task<List<Apps.Album.AlbumConfig>> GetAlbumConfig(string pcid)
+        {
+            return null;
+        }
+
         public async Task SetAppMgrConfig(string pcid,string appid,string jsonconfig)
         {
 
