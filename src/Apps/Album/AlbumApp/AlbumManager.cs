@@ -7,24 +7,24 @@ namespace NSPersonalCloud.Apps.Album
 {
     public class AlbumManager : IAppManager
     {
-        Task<List<IApp>> IAppManager.GetApps()
+        async Task<List<IApp>> IAppManager.GetApps()
         {
-            throw new NotImplementedException();
+            return null;
         }
 
-        Task<List<Tuple<string, global::EmbedIO.WebApi.WebApiController>>> IAppManager.GetWebControllers()
+        async Task<List<Tuple<string, EmbedIO.WebApi.WebApiController>>> IAppManager.GetWebControllers()
         {
-            throw new NotImplementedException();
+            return null;
         }
 
-        Task IAppManager.Init(string json)
+        Task IAppManager.Init(string _)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
 
-        Task IAppManager.InstallWebStatiFiles(string webstaticpath)
+        Task IAppManager.InstallWebStatiFiles(string _)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }
