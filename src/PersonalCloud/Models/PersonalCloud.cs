@@ -58,7 +58,7 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
-        List<AppLauncher> Apps { get;  }
+        public List<AppLauncher> Apps { get;  }
         internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
         //Cloud password
