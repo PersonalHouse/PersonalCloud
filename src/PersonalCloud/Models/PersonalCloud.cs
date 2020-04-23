@@ -27,24 +27,29 @@ namespace NSPersonalCloud
         {
             CachedNodes = new List<NodeInfoForPC>();
             RootFS = new RootFileSystem(pcsrv);
-            var instances = storageProviderInfos?
-                .Select(x => {
+            StorageProviderInstances = new List<StorageProviderInstance>();
+
+            if (storageProviderInfos != null)
+            {
+                foreach (var info in storageProviderInfos)
+                {
                     try
                     {
-                        if (x.Type == StorageProviderInstance.TypeAliYun)
+                        if (info.Type == StorageProviderInstance.TypeAliYun)
                         {
-                            return new StorageProviderInstance_AliyunOSS(x);
+                            StorageProviderInstances.Add(new StorageProviderInstance_AliyunOSS(info));
+                        }
+                        else if (info.Type == StorageProviderInstance.TypeAzure)
+                        {
+                            StorageProviderInstances.Add(new StorageProviderInstance_AzureBlob(info));
                         }
                     }
                     catch
                     {
                         // Ignore any errors
                     }
-                    return null;
-                })
-                .Where(x => x != null)
-                .ToList<StorageProviderInstance>();
-            StorageProviderInstances = instances ?? new List<StorageProviderInstance>();
+                }
+            }
             logger = l;
         }
 
@@ -102,6 +107,29 @@ namespace NSPersonalCloud
             }
         }
 
+        public bool AddStorageProvider(string nodeName, AzureBlobConfig azureBlobConfig, StorageProviderVisibility visibility)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (azureBlobConfig == null) throw new ArgumentNullException(nameof(azureBlobConfig));
+
+            lock (StorageProviderInstances)
+            {
+                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
+                {
+                    var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                        Type = StorageProviderInstance.TypeAzure,
+                        Name = nodeName,
+                        Visibility = visibility,
+                        Settings = JsonConvert.SerializeObject(azureBlobConfig)
+                    });
+                    StorageProviderInstances.Add(instance);
+                    ResyncClientListToStorageProviderInstances();
+                    return true;
+                }
+                return false;
+            }
+        }
+
         public bool RemoveStorageProvider(string nodeName)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
@@ -135,11 +163,22 @@ namespace NSPersonalCloud
             List<string> removes = new List<string>();
             foreach (var client in RootFS.ClientList)
             {
-                if (client.Value is AliyunOSSFileSystemClient instance)
+                if (client.Value is AliyunOSSFileSystemClient aliyunOssInstance)
                 {
-                    if (StorageProviderInstances.Any(x => x.RuntimeId == instance.RuntimeId))
+                    if (StorageProviderInstances.Any(x => x.RuntimeId == aliyunOssInstance.RuntimeId))
                     {
-                        skips.Add(instance.RuntimeId);
+                        skips.Add(aliyunOssInstance.RuntimeId);
+                    }
+                    else
+                    {
+                        removes.Add(client.Key);
+                    }
+                }
+                else if (client.Value is AzureBlobFileSystemClient azureBlobInstance)
+                {
+                    if (StorageProviderInstances.Any(x => x.RuntimeId == azureBlobInstance.RuntimeId))
+                    {
+                        skips.Add(azureBlobInstance.RuntimeId);
                     }
                     else
                     {
@@ -154,9 +193,13 @@ namespace NSPersonalCloud
             foreach (var item in StorageProviderInstances)
             {
                 if (skips.Contains(item.RuntimeId)) continue;
-                if (item.ProviderInfo.Type == StorageProviderInstance.TypeAliYun && item is StorageProviderInstance_AliyunOSS instance)
+                if (item.ProviderInfo.Type == StorageProviderInstance.TypeAliYun && item is StorageProviderInstance_AliyunOSS aliyunOssInstance)
                 {
-                    InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, instance.OssConfig));
+                    InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, aliyunOssInstance.OssConfig));
+                }
+                else if (item.ProviderInfo.Type == StorageProviderInstance.TypeAzure && item is StorageProviderInstance_AzureBlob azureBlobInstance)
+                {
+                    InsertRootFS(item.ProviderInfo.Name, new AzureBlobFileSystemClient(item.RuntimeId, azureBlobInstance.AzureBlobConfig));
                 }
             }
         }
@@ -228,6 +271,36 @@ namespace NSPersonalCloud
         }
 
         public void InsertRootFS(string nodeName, AliyunOSSFileSystemClient client)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (client == null) throw new ArgumentNullException(nameof(client));
+
+            string nm = nodeName;
+            string key = nm;
+            if (RootFS.ClientList.ContainsKey(nm))
+            {
+                //user input duplicated name
+                for (int i = 2; i < int.MaxValue; i++)
+                {
+                    key = $"{nm}({i})";
+                    if (RootFS.ClientList.ContainsKey(key))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        RootFS.ClientList.TryAdd(key, client);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                RootFS.ClientList.TryAdd(key, client);
+            }
+        }
+
+        public void InsertRootFS(string nodeName, AzureBlobFileSystemClient client)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
             if (client == null) throw new ArgumentNullException(nameof(client));
