@@ -217,7 +217,49 @@ namespace NSPersonalCloud.FileSharing.Aliyun
 
         public ValueTask DeleteAsync(string path, bool safeDelete = false, CancellationToken cancellation = default)
         {
-            throw new NotImplementedException();
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            path = path.Trim('/');
+            if (path.Length == 0)
+            {
+                return default;
+            }
+
+            var client = _ClientBuilder.GetBlobContainerClient(_ContainerName);
+            try
+            {
+                var blobClient = client.GetBlobClient(path);
+                blobClient.Delete();
+                return default;
+            }
+            catch
+            {
+                // Not a file
+            }
+
+            var pages = client.GetBlobsByHierarchy(prefix: path + "/", delimiter: "/").AsPages(pageSizeHint: 3);
+            var firstPage = pages.FirstOrDefault();
+
+            if (firstPage != null)
+            {
+                bool deleteFolder = false;
+                foreach (var item in firstPage.Values)
+                {
+                    if (!item.IsBlob || !item.Blob.Name.EndsWith('/'))
+                    {
+                        throw new IOException("The directory is not empty.");
+                    }
+                    if (item.IsBlob && item.Blob.Name.EndsWith('/'))
+                    {
+                        deleteFolder = true;
+                    }
+                }
+                if (deleteFolder)
+                {
+                    client.GetBlobClient(path + "/").Delete();
+                }
+            }
+
+            return default;
         }
 
         public ValueTask SetFileLengthAsync(string path, long length, CancellationToken cancellation = default)

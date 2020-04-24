@@ -244,6 +244,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             {
                 var result = client.GetObjectMetadata(_OssConfig.BucketName, path);
                 client.DeleteObject(_OssConfig.BucketName, path);
+                return default;
             }
             catch
             {
