@@ -192,9 +192,23 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             return new ValueTask<Stream>(fileObj.Content);
         }
 
-        public ValueTask<Stream> ReadPartialFileAsync(string path, long fromPosition, long includeToPosition, CancellationToken cancellation = default)
+        public ValueTask<Stream> ReadPartialFileAsync(string fileName, long fromPosition, long includeToPosition, CancellationToken cancellation = default)
         {
-            throw new NotImplementedException();
+            fileName = fileName?.Replace('\\', '/').Trim('/');
+            var client = new OssClient(_OssConfig.OssEndpoint, _OssConfig.AccessKeyId, _OssConfig.AccessKeySecret);
+            var req = new GetObjectRequest(_OssConfig.BucketName, fileName);
+            req.SetRange(fromPosition, includeToPosition);
+            var fileObj = client.GetObject(req);
+            if (fileObj.HttpStatusCode == System.Net.HttpStatusCode.PartialContent)
+            {
+                return new ValueTask<Stream>(fileObj.Content);
+            }
+            else
+            {
+                req.SetRange(fromPosition, -1);
+                fileObj = client.GetObject(req);
+                return new ValueTask<Stream>(fileObj.Content);
+            }
         }
 
         #endregion IReadableFileSystem
