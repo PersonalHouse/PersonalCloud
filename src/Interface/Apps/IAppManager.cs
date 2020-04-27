@@ -7,11 +7,12 @@ namespace NSPersonalCloud.Interfaces.Apps
 {
     public interface IAppManager
     {
+        public string GetAppId();
         public  Task InstallWebStatiFiles(string webstaticpath);
-        public  Task Init(string json);
-        public Task<List<Tuple<string, EmbedIO.WebApi.WebApiController>>> GetWebControllers();
+        public List<AppLauncher> Config(string configjsons);
 
-        public Task<List<IApp>> GetApps();
+        public EmbedIO.WebServer ConfigWebController(string id, string path, EmbedIO.WebServer webServer);
+
 
     }
 }

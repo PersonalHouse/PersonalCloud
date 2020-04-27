@@ -36,25 +36,5 @@
   </ItemGroup>
 
   
-  <ItemGroup>
-    <Folder Include="Apps\Static\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Apps\Static\**" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  
-  <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
-    <!-- Include the newly-built files in the publish output -->
-    <ItemGroup>
-      <DistFiles Include="Apps\Static\**" />
-      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-        <RelativePath>%(DistFiles.Identity)</RelativePath>
-        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-      </ResolvedFileToPublish>
-    </ItemGroup>
-  </Target>
   
 </Project>

@@ -2,6 +2,7 @@
 using System.Linq;
 
 using Microsoft.Extensions.Logging;
+using NSPersonalCloud.Interfaces.Apps;
 
 namespace NSPersonalCloud
 {
@@ -18,6 +19,7 @@ namespace NSPersonalCloud
 #pragma warning restore CA1819 // Properties should not return arrays
 
         public long TimeStamp { get; set; }
+        public List<AppLauncher> Apps { get; internal set; }
 
         public List<StorageProviderInfo> StorageProviders { get; }
 
@@ -35,19 +37,21 @@ namespace NSPersonalCloud
                 DisplayName = DisplayName,
                 NodeDisplayName = NodeDisplayName,
                 MasterKey = MasterKey,
-                UpdateTimeStamp = TimeStamp
+                UpdateTimeStamp = TimeStamp,
+                Apps = Apps
             };          
         }
 
         internal static PersonalCloudInfo FromPersonalCloud(PersonalCloud pc)
         {
-            
+
             return new PersonalCloudInfo(pc.StorageProviderInstances.Select(x => x.ProviderInfo).ToList()) {
                 Id = pc.Id,
                 DisplayName = pc.DisplayName,
                 NodeDisplayName = pc.NodeDisplayName,
                 MasterKey = pc.MasterKey,
-                TimeStamp = pc.UpdateTimeStamp
+                TimeStamp = pc.UpdateTimeStamp,
+                Apps = pc.Apps
             };
 
         }

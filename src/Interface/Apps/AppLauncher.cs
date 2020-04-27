@@ -9,7 +9,10 @@ namespace NSPersonalCloud.Interfaces.Apps
 #pragma warning disable CA1051 // Do not declare visible instance fields
         public string Name;
         public AppType AppType;
-        public string WebAddress;//include access key
+        public string NodeId;
+        public string AppId;
+        public string WebAddress;
+        public string AccessKey;
 #pragma warning restore CA1051 // Do not declare visible instance fields
     }
 }

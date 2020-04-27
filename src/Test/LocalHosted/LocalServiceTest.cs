@@ -10,6 +10,8 @@ using NUnit.Framework;
 using NSPersonalCloud;
 using System.Threading.Tasks;
 using EmbedIO;
+using NSPersonalCloud.Apps.Album;
+using System.Collections.Generic;
 
 namespace LocalHosted
 {
@@ -64,6 +66,68 @@ namespace LocalHosted
 
                         SimapleShareCheckContent(pc2, 2,2);
                         SimapleShareCheckContent(pc1, 2,2);
+                    }
+                }
+            }
+        }
+
+
+        [Test]
+        public void SimpleApp()
+        {
+
+            var my = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var dic = Path.Combine(my, "TestConsoleApp", "webapps");
+
+            var t1 = new SimpleConfigStorage(
+                Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
+            Directory.CreateDirectory(dic);
+
+
+            using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
+            {
+                var l = loggerFactory.CreateLogger<LocalServiceTest>();
+                var t = DateTime.Now;
+
+                var inf1 = new HostPlatformInfo();
+                using (var srv1 = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath)))
+                {
+                    PCLocalService.InstallApps(dic).Wait();
+
+                    var inf2 = new HostPlatformInfo();
+                    using (var srv2 = new PCLocalService(inf2, loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    {
+                        srv1.StartService();
+                        srv2.StartService();
+
+                        //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
+                        var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+
+                        srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
+                            new AlbumConfig {
+                                MediaFolder= @"F:\pics",
+                                Name="test",
+                                ThumbnailFolder=@"D:\Projects\out"
+                            }
+                        });
+
+                        if (pc1.Apps?.Count != 1)
+                        {
+                            Console.WriteLine($"Install app failed. exit");
+                            return;
+                        }
+
+                        var ret = srv1.SharePersonalCloud(pc1).Result;
+                        Thread.Sleep(3000);
+                        var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
+                        Thread.Sleep(1000);
+
+                        if (pc2.Apps?.Count != 1)
+                        {
+                            Console.WriteLine($"Install app failed. exit");
+                            return;
+                        }
                     }
                 }
             }

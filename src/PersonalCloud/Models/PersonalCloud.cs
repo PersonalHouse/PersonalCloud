@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -46,6 +47,8 @@ namespace NSPersonalCloud
                 .ToList<StorageProviderInstance>();
             StorageProviderInstances = instances ?? new List<StorageProviderInstance>();
             logger = l;
+            Apps = new List<AppLauncher>();
+            httpClient = new Lazy<HttpClient>(() => new HttpClient());
         }
 
         // display name for human beings
@@ -58,9 +61,19 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
-        List<AppLauncher> Apps { get;  }
         internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
+        #region Apps
+
+        public List<AppLauncher> Apps { get; internal set; }
+        internal void AddApp(AppLauncher appl)
+        {
+            lock (Apps)
+            {
+                Apps.Add(appl);
+            }
+        }
+        #endregion
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] MasterKey { get; set; }
@@ -161,9 +174,10 @@ namespace NSPersonalCloud
             }
         }
 
-        internal void OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
+        internal async Task OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
         {
             bool updated = false;
+            bool deleted = false;
             lock (CachedNodes)
             {
                 var ssdpin = ssdpinfo.FirstOrDefault(x => x.Id == Id);
@@ -209,13 +223,37 @@ namespace NSPersonalCloud
                     if (nremoved > 0)
                     {
                         OnCachedNodesChange();
-                        updated = true;
+                        deleted = true;
                     }
                 }
             }
-            if (updated)
+            if (updated|| deleted)
             {
-                Task.Run(() => {
+                if (!deleted)
+                {
+                    var pci = await GetPeerPCInfo(this, ninfo).ConfigureAwait(false);
+                    foreach (var ai in pci.Apps)
+                    {
+                        NodeInfoForPC n = null;
+                        lock (CachedNodes)
+                        {
+                            n = CachedNodes.FirstOrDefault(x => x.NodeGuid == ai.NodeId);
+                        }
+                        if (n == null)
+                        {
+                            return;
+                        }
+                        var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
+                        if (a==null)
+                        {
+                            lock (Apps)
+                            {
+                                Apps.Add(ai);
+                            }
+                        }
+                    }
+                }
+                _ = Task.Run(() => {
                     try
                     {
                         OnNodeChangedEvent?.Invoke(this, EventArgs.Empty);
@@ -224,6 +262,23 @@ namespace NSPersonalCloud
                     {
                     }
                 });
+            }
+        }
+
+        Lazy<HttpClient> httpClient;
+        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, NodeInfo ninfo)
+        {
+            try
+            {
+                var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
+                var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
+                var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
+                return cfg;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Exception in GetPeerPCInfo", e);
+                return null;
             }
         }
 
@@ -400,6 +455,9 @@ namespace NSPersonalCloud
             OnCachedNodesChange();
         }
 
+
+        #region encryptedName
+
         string DecryptName(byte[] en)
         {
             using (var aes = Aes.Create())
@@ -429,7 +487,6 @@ namespace NSPersonalCloud
                 }
             }
         }
-
         byte[] encryptedName;
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] EncryptedName
@@ -476,6 +533,7 @@ namespace NSPersonalCloud
                 }
             }
         }
+        #endregion
 
         #region IDisposable Support
 
@@ -494,6 +552,7 @@ namespace NSPersonalCloud
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
         #endregion
 
     }

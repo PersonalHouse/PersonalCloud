@@ -64,5 +64,14 @@ namespace LocalHosted
             var c = JsonConvert.SerializeObject(config);
             File.WriteAllText(Path.Combine(GetConfigFolder(), "service.txt"), c);
         }
+
+        public void SaveApp(string appid, string pcid,  string jsonconfigs)
+        {
+        }
+
+        public List<Tuple<string, string>> GetApp(string appid)
+        {
+            return new List<Tuple<string, string>>();
+        }
     }
 }

@@ -53,7 +53,7 @@ namespace NSPersonalCloud
             udpMulticastServer = svr;
             logger = l;
             AnnounceString = "";
-            header = new byte[] { 44, 59, 48, 1, 0, 0, 0, };
+            header = new byte[] { 44, 59, 48, (byte)Definition.CloudVersion, 0, 0, 0, };
             responseCache = new Dictionary<string, long>();
             searchCache = new Dictionary<string, long>();
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -52,6 +53,7 @@ namespace NSPersonalCloud
 
         private IConfigStorage ConfigStorage { get; }
         private VirtualFileSystem FileSystem { get; }
+        string ExtraWebPath;
 
         NodeDiscovery nodeDiscovery;
         HttpClient httpclient;
@@ -62,19 +64,28 @@ namespace NSPersonalCloud
         readonly List<FetchQueueItem> fetchQueue;
 
         public int ServerPort { get; private set; }
-        public string NodeGuid { get; private set; }
+        
+        public string NodeId { get; private set; }//guid
         public IReadOnlyList<PersonalCloud> PersonalClouds => _PersonalClouds.AsReadOnly();
+
+
 
         public event EventHandler<ServiceErrorEventArgs> OnError;
 
+
+        /// <summary>
+        /// used in lock(_PersonalClouds){}
+        /// </summary>
         private List<PersonalCloud> _PersonalClouds;
         WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
         public ShareController CreateShareController() => new ShareController(FileSystem,this);
 
-        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem)
+        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem,string extraWebPath=null)
         {
+            ExtraWebPath = extraWebPath;
+
             ConfigStorage = configStorage;
             FileSystem = fileSystem;
             loggerFactory = logfac;
@@ -94,7 +105,7 @@ namespace NSPersonalCloud
             var cfg = LoadConfiguration();
             ServerPort = cfg.Port;
 #pragma warning disable CA1305 // Specify IFormatProvider
-            NodeGuid = cfg.Id.ToString("N");
+            NodeId = cfg.Id.ToString("N");
 #pragma warning restore CA1305 // Specify IFormatProvider
 
             LoadPCList();
@@ -114,8 +125,11 @@ namespace NSPersonalCloud
         {
             context.Response.ContentType = MimeType.Json;
             using var text = context.OpenResponseText(new UTF8Encoding(false));
-            await text.WriteAsync(System.Text.Json.JsonSerializer.Serialize(data,
-                new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
+//             await text.WriteAsync(System.Text.Json.JsonSerializer.Serialize(data,
+//                 new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
+            await text.WriteAsync(
+                JsonConvert.SerializeObject(data,
+                new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })).ConfigureAwait(false);
         }
 
         void InitWebServer()
@@ -129,11 +143,19 @@ namespace NSPersonalCloud
             WebServer = new WebServer(ServerPort);
             WebServer = WebServer
                 .WithModule(new PCWebServerAuth("/api/share", this))
-                .WithWebApi("SSDP", "/clouds", module => module.WithController(CreateSSDPServiceController))
-                .WithWebApi("Share", "/api/share", module => module.WithController(CreateShareController))
-                .WithWebApi("Album", "/api/Apps/album", EmbedIOResponseSerializerCallback, module => module.WithController(typeof(Plugins.Album.AlbumWebController)))
-                // .WithStaticFolder("/AppsStatic",Path.Combine(curpath, "Apps","Static"),false)
-                ;
+                .WithWebApi("SSDP", "/clouds", EmbedIOResponseSerializerCallback,module => module.WithController(CreateSSDPServiceController))
+                .WithWebApi("Share", "/api/share", EmbedIOResponseSerializerCallback, module => module.WithController(CreateShareController));
+            if (!string.IsNullOrWhiteSpace(ExtraWebPath))
+            {
+                WebServer = WebServer.WithStaticFolder("/AppsStatic", ExtraWebPath, false);
+            }
+            var apps = GetAppMgrs();
+            foreach (var appmgr in apps)
+            {
+                var id = appmgr.GetAppId();
+                WebServer = appmgr.ConfigWebController(id, $"/api/Apps/{id}", WebServer);
+                
+            }
             WebServer.Start();
 
         }
@@ -220,7 +242,7 @@ namespace NSPersonalCloud
             var pcs = PersonalClouds;
             foreach (var pc in pcs)
             {
-                pc.OnNodeUpdate(node, res);
+                await pc.OnNodeUpdate(node, res).ConfigureAwait(false);
                 //logger.LogTrace($"{ServerPort}:OnNodeUpdate {pc.NodeDisplayName}");
             }
             if (res?.Count > 0)
@@ -311,7 +333,7 @@ namespace NSPersonalCloud
         }
         public void CleanExpiredNodes()
         {
-            Task.Run(() => {
+            Task.Run(async () => {
                 var cur = DateTime.UtcNow.ToFileTime();
 
                 List<KeyValuePair<string, NodeInfo>> lis = null;
@@ -334,7 +356,7 @@ namespace NSPersonalCloud
                 {
                     foreach (var item in lis)
                     {
-                        pc.OnNodeUpdate(item.Value, ssdp);
+                        await pc.OnNodeUpdate(item.Value, ssdp).ConfigureAwait(false);
                     }
                 }
             });
@@ -356,7 +378,7 @@ namespace NSPersonalCloud
             {
                 foreach (var item in lis)
                 {
-                    pc.OnNodeUpdate(item.Value, ssdp);
+                    _= pc.OnNodeUpdate(item.Value, ssdp);
                 }
             }
         }
@@ -476,30 +498,47 @@ namespace NSPersonalCloud
 
         #region Apps
 
-        List<IAppManager> GetAppMgrs()
+        static List<IAppManager> GetAppMgrs()
         {
             return new List<IAppManager> { new Apps.Album.AlbumManager() };
         }
         public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
         {
-            return SetAppMgrConfig(pcid, "Album", JsonConvert.SerializeObject(albcongs));
+            return SetAppMgrConfig("Album", pcid,  JsonConvert.SerializeObject(albcongs));
         }
 
-        public async  Task<List<Apps.Album.AlbumConfig>> GetAlbumConfig(string pcid)
+        public Task SetAppMgrConfig(string appid, string pcid, string jsonconfig)
         {
-            return null;
-        }
+            var lis = GetAppMgrs();
+            var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
+            if (appmgr!=null)
+            {
+                var appls = appmgr.Config(jsonconfig);
+                ConfigStorage.SaveApp(appid, pcid, jsonconfig);
+                foreach (var appl in appls)
+                {
+                    PersonalCloud pc = null;
+                    lock (_PersonalClouds)
+                    {
+                        pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcid);
+                    }
+                    if (pc != null)
+                    {
+                        appl.NodeId = NodeId;
+                        appl.AppId = appid;
+                        pc.AddApp(appl);
+                    }
+                }
+            }
 
-        public async Task SetAppMgrConfig(string pcid,string appid,string jsonconfig)
-        {
-
+            return Task.CompletedTask;
         }
         /// <summary>
         /// install apps. may be called multiple times
         /// </summary>
         /// <param name="webstaticpath"></param>
         /// <returns></returns>
-        public async Task InstallApps(string webstaticpath)
+        public static async Task InstallApps(string webstaticpath)
         {
             var lis = GetAppMgrs();
             foreach (var item in lis)
@@ -507,6 +546,35 @@ namespace NSPersonalCloud
                 await item.InstallWebStatiFiles(webstaticpath).ConfigureAwait(false);
             }
         }
+
+
+        private void LoadApps()
+        {
+            var lis = GetAppMgrs();
+            foreach (var item in lis)
+            {
+                var s = ConfigStorage.GetApp(item.GetAppId());
+                foreach (var pcc in s)
+                {
+                    var appls = item.Config(pcc.Item2);
+                    foreach (var appl in appls)
+                    {
+                        PersonalCloud pc = null;
+                        lock (_PersonalClouds)
+                        {
+                            pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcc.Item2);
+                        }
+                        if (pc != null)
+                        {
+                            appl.NodeId = NodeId;
+                            pc.AddApp(appl);
+                        }
+                    }
+                }
+            }
+        }
+
+
         #endregion
 
         public async Task<PersonalCloud> CreatePersonalCloud(string displayName, string nodedisplaryname)
@@ -532,7 +600,7 @@ namespace NSPersonalCloud
 
             EnsureWebServerStarted();
             await EnsureSSDPStarted().ConfigureAwait(false);
-            await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
 
             return pc;
 
@@ -560,7 +628,7 @@ namespace NSPersonalCloud
                 }
                 if (n > 0)
                 {
-                    await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
+                    await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
                 }
             }
         }
@@ -574,7 +642,7 @@ namespace NSPersonalCloud
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
             var str = pc.GenerateShareCode();
-            await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
             return str;
         }
 
@@ -587,7 +655,7 @@ namespace NSPersonalCloud
 #pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
             pc.CurrentShareCode = null;
-            await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
             return;
         }
 
@@ -629,7 +697,7 @@ namespace NSPersonalCloud
                     {
                         KnownNodes.Clear();
                     }                    
-                    await nodeDiscovery.RePublish(NodeGuid, ServerPort).ConfigureAwait(false);
+                    await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
                     nodeDiscovery.StartSearch();
                     logger.LogDebug($"Join {pc.DisplayName}");
                     return pc;
@@ -644,6 +712,8 @@ namespace NSPersonalCloud
             logger.LogInformation("StartService");
             EnsureWebServerStarted();
             _ = EnsureSSDPStarted();
+
+            LoadApps();
         }
 
 
@@ -673,7 +743,7 @@ namespace NSPersonalCloud
             }
 
             nodeDiscovery.StartMonitoring();
-            _ = nodeDiscovery.RePublish(NodeGuid, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
             nodeDiscovery.StartSearch();
         }
 
@@ -681,7 +751,7 @@ namespace NSPersonalCloud
         public void NetworkRefeshNodes()
         {
             //nodeDiscovery.ForceNetworkRefesh();
-            _ = nodeDiscovery.RePublish(NodeGuid, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
             nodeDiscovery.StartSearch();
         }
 
@@ -702,7 +772,7 @@ namespace NSPersonalCloud
                 _PersonalClouds.Remove(pc);
             }
             SavePCList();
-            _ = nodeDiscovery.RePublish(NodeGuid, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
         }
 
         //Seting multicast ports.for internal use only

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using NSPersonalCloud;
+using NSPersonalCloud.Apps.Album;
 
 namespace TestConsoleApp
 {
@@ -82,8 +84,10 @@ namespace TestConsoleApp
 
         private static void JoinPersonalCloud()
         {
-            var t2 = new HostPlatformInfo();
-            pcservice = new PCLocalService(t2, loggerFactory, new VirtualFileSystem(t2.GetConfigFolder()));
+            var t2 = new SimpleConfigStorage(
+                Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), 
+                "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
+            pcservice = new PCLocalService(t2, loggerFactory, new VirtualFileSystem(t2.RootPath));
             //pcservice.SetUdpPort(2330, new[] { 2330 });
             pcservice.StartService();
 
@@ -97,12 +101,31 @@ namespace TestConsoleApp
 
         private static void CreateAndSharePC()
         {
-            var t1 = new HostPlatformInfo();
-            pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.GetConfigFolder()));
+            var my = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var dic = Path.Combine(my, "TestConsoleApp", "webapps");
+
+            var t1 = new SimpleConfigStorage(
+                Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
+            pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath),dic);
+            Directory.CreateDirectory(dic);
+            PCLocalService.InstallApps(dic).Wait();
+
             pcservice.StartService();
             pc = pcservice.CreatePersonalCloud("test", "test1").Result;
 
+            pcservice.SetAlbumConfig(pc.Id, new System.Collections.Generic.List<AlbumConfig>() { new AlbumConfig {MediaFolder= @"F:\pics",
+            Name="test",ThumbnailFolder=@"D:\Projects\out"
+            } });
+
+            if (pc.Apps?.Count!=1)
+            {
+                Console.WriteLine($"Install app failed. exit");
+                return;
+            }
             var ret = pcservice.SharePersonalCloud(pc).Result;
+
+
             Console.WriteLine($"Share code is {ret}");
         }
     }

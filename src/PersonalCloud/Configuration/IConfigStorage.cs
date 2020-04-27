@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 using NSPersonalCloud.Config;
 
@@ -11,5 +12,9 @@ namespace NSPersonalCloud
 
         IEnumerable<PersonalCloudInfo> LoadCloud();
         void SaveCloud(IEnumerable<PersonalCloudInfo> cloud);
+
+        void SaveApp(string appid, string pcid,string jsonconfigs);
+
+        List<Tuple<string,string>> GetApp(string appid);
     }
 }

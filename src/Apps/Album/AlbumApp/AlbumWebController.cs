@@ -2,32 +2,41 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using NSPersonalCloud.Apps.Album;
+using NSPersonalCloud.Interfaces.Apps;
 using SQLite;
 
-namespace NSPersonalCloud.Plugins.Album
+namespace NSPersonalCloud.Apps.Album
 {
 #pragma warning disable IDE0040 // Add accessibility modifiers
     public class AlbumWebController: WebApiController
 #pragma warning restore IDE0040 // Add accessibility modifiers
     {
-        string _albumFolder;
-        string _orginFolder;
-        public AlbumWebController()//string albumFolder)
+        Func<string, AlbumConfig> _authCb;
+        public AlbumWebController(Func<string, AlbumConfig> authCb)
         {
-            //_albumFolder = albumFolder;
-            _albumFolder = @"D:\Projects\PersonalCloud\src\Apps\Album\ImageIndexer\out";
-            _orginFolder = @"F:\download\";
+            _authCb = authCb;
+        }
+        AlbumConfig AuthAndGetConfig()
+        {
+            return _authCb("");
         }
         [Route(HttpVerbs.Get, "/GetDays")]
         public async Task GetDays()
         {
-            var s =  await File.ReadAllTextAsync(Path.Combine(_albumFolder, Defines.YMDFileName)).ConfigureAwait(false);
+            var cfg = AuthAndGetConfig();
+            if (cfg==null)
+            {
+                HttpContext.Response.StatusCode = 403;
+                return;
+            }
+            var s =  await File.ReadAllTextAsync(Path.Combine(cfg.ThumbnailFolder, Defines.YMDFileName)).ConfigureAwait(false);
             HttpContext.Response.ContentType = MimeType.Json;
             using var responseWriter = HttpContext.OpenResponseText(Encoding.UTF8);
             responseWriter.Write(s);
@@ -35,7 +44,13 @@ namespace NSPersonalCloud.Plugins.Album
         [Route(HttpVerbs.Get, "/GetMediaInDay")]
         public Task<List<ImageInfo>> GetMediaInDay([QueryField("y", true)]int year, [QueryField("m", true)]int month, [QueryField("d", true)]int day)
         {
-            using var dbConnection = new SQLiteConnection(Path.Combine(_albumFolder, Defines.DBFileName), SQLiteOpenFlags.ReadWrite);
+            var cfg = AuthAndGetConfig();
+            if (cfg == null)
+            {
+                HttpContext.Response.StatusCode = 403;
+                return null;
+            }
+            using var dbConnection = new SQLiteConnection(Path.Combine(cfg.ThumbnailFolder, Defines.DBFileName), SQLiteOpenFlags.ReadWrite);
             var lis =  dbConnection.Query<ImageInfo>("select * from ImageInfo where year= ? and month= ? and day = ? order by MediaTime",
                 year, month, day);
             return Task.FromResult(lis);
@@ -44,7 +59,13 @@ namespace NSPersonalCloud.Plugins.Album
         [Route(HttpVerbs.Get, "/GetMediaThumbnail")]
         public async Task GetMediaThumbnail([QueryField("id", true)]long id)
         {
-            var fp = Path.Combine(_albumFolder, Defines.ThumbnailFileName, $"{id}.jpg");
+            var cfg = AuthAndGetConfig();
+            if (cfg == null)
+            {
+                HttpContext.Response.StatusCode = 403;
+                return;
+            }
+            var fp = Path.Combine(cfg.ThumbnailFolder, Defines.ThumbnailFileName, $"{id}.jpg");
             using var rs = new FileStream(fp, FileMode.Open, FileAccess.Read);
             using var stream = HttpContext.OpenResponseStream();
             HttpContext.Response.ContentLength64 = rs.Length;
@@ -57,11 +78,17 @@ namespace NSPersonalCloud.Plugins.Album
         }
         async Task GetFile(long id, bool asfile)
         {
-            using var dbConnection = new SQLiteConnection(Path.Combine(_albumFolder, Defines.DBFileName), SQLiteOpenFlags.ReadOnly);
+            var cfg = AuthAndGetConfig();
+            if (cfg == null)
+            {
+                HttpContext.Response.StatusCode = 403;
+                return;
+            }
+            using var dbConnection = new SQLiteConnection(Path.Combine(cfg.ThumbnailFolder, Defines.DBFileName), SQLiteOpenFlags.ReadOnly);
             var p = dbConnection.Table<ImageInfo>().FirstOrDefault(x => x.Id == id);
             if (p != null)
             {
-                var fp = Path.Combine(_orginFolder, p.Path);
+                var fp = Path.Combine(cfg.MediaFolder, p.Path);
                 using var rs = new FileStream(fp, FileMode.Open, FileAccess.Read);
 
                 if (HttpContext.Request.IsRangeRequest(rs.Length, p.MediaTime.ToString(CultureInfo.InvariantCulture),

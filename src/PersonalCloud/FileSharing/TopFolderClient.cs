@@ -390,5 +390,48 @@ namespace NSPersonalCloud.FileSharing
             using var response = await SendRequest(request, cancellation).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
         }
+
+
+        public static async Task<string> GetCloudInfo(HttpClient lhttpClient, Uri url, string pcid, byte[] masterkey, CancellationToken cancellation = default)
+        {
+            if (lhttpClient==null)
+            {
+                throw new ArgumentNullException(nameof(lhttpClient));
+            }
+            using var request = new HttpRequestMessage {
+                RequestUri = url
+            };
+
+
+            var ts = DateTime.UtcNow.ToFileTime();
+            request.Headers.Add(AuthDefinitions.AuthenticationVersion, AuthDefinitions.CurAuthVersion.ToString(CultureInfo.InvariantCulture));
+            request.Headers.Add(AuthDefinitions.AuthenticationTimeStamp, ts.ToString(CultureInfo.InvariantCulture));
+            request.Headers.Add(AuthDefinitions.AuthenticationPCId, pcid);
+            var hash = EmbedIOAuthentication.V1Auth(ts, request.RequestUri.ToString().ToUpperInvariant(), masterkey);
+            request.Headers.Add(AuthDefinitions.AuthenticationHash, hash.Value.ToString(CultureInfo.InvariantCulture));
+
+            HttpResponseMessage response = null;
+            try
+            {
+                using var ctstimeout = new CancellationTokenSource(RequestTimeoutInMs);
+                if (cancellation != default)
+                {
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellation, ctstimeout.Token);
+                    response = await lhttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+                }
+                else
+                {
+                    response = await lhttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ctstimeout.Token).ConfigureAwait(false);
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                response?.Dispose();
+            }
+        }
     }
 }

@@ -58,7 +58,7 @@ namespace NSPersonalCloud
                 if (newhcode== hash.Value)
                 {
                     var pci = PersonalCloudInfo.FromPersonalCloud(pc);
-                    pci.NodeGuid = LocalService.NodeGuid;
+                    pci.NodeGuid = LocalService.NodeId;
                     return pci;
                 }
             }
