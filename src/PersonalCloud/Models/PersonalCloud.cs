@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,27 +27,30 @@ namespace NSPersonalCloud
         {
             CachedNodes = new List<NodeInfoForPC>();
             RootFS = new RootFileSystem(pcsrv);
-            var instances = storageProviderInfos?
-                .Select(x => {
+            StorageProviderInstances = new List<StorageProviderInstance>();
+
+            if (storageProviderInfos != null)
+            {
+                foreach (var info in storageProviderInfos)
+                {
                     try
                     {
-                        if (x.Type == StorageProviderInstance.TypeAliYun)
+                        if (info.Type == StorageProviderInstance.TypeAliYun)
                         {
-                            return new StorageProviderInstance_AliyunOSS(x);
+                            StorageProviderInstances.Add(new StorageProviderInstance_AliyunOSS(info));
+                        }
+                        else if (info.Type == StorageProviderInstance.TypeAzure)
+                        {
+                            StorageProviderInstances.Add(new StorageProviderInstance_AzureBlob(info));
                         }
                     }
                     catch
                     {
                         // Ignore any errors
                     }
-                    return null;
-                })
-                .Where(x => x != null)
-                .ToList<StorageProviderInstance>();
-            StorageProviderInstances = instances ?? new List<StorageProviderInstance>();
+                }
+            }
             logger = l;
-            Apps = new List<AppLauncher>();
-            httpClient = new Lazy<HttpClient>(() => new HttpClient());
         }
 
         // display name for human beings
@@ -61,19 +63,9 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
+        public List<AppLauncher> Apps { get;  }
         internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
-        #region Apps
-
-        public List<AppLauncher> Apps { get; internal set; }
-        internal void AddApp(AppLauncher appl)
-        {
-            lock (Apps)
-            {
-                Apps.Add(appl);
-            }
-        }
-        #endregion
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] MasterKey { get; set; }
@@ -106,6 +98,29 @@ namespace NSPersonalCloud
                         Name = nodeName,
                         Visibility = visibility,
                         Settings = JsonConvert.SerializeObject(ossConfig)
+                    });
+                    StorageProviderInstances.Add(instance);
+                    ResyncClientListToStorageProviderInstances();
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        public bool AddStorageProvider(string nodeName, AzureBlobConfig azureBlobConfig, StorageProviderVisibility visibility)
+        {
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (azureBlobConfig == null) throw new ArgumentNullException(nameof(azureBlobConfig));
+
+            lock (StorageProviderInstances)
+            {
+                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
+                {
+                    var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                        Type = StorageProviderInstance.TypeAzure,
+                        Name = nodeName,
+                        Visibility = visibility,
+                        Settings = JsonConvert.SerializeObject(azureBlobConfig)
                     });
                     StorageProviderInstances.Add(instance);
                     ResyncClientListToStorageProviderInstances();
@@ -148,11 +163,22 @@ namespace NSPersonalCloud
             List<string> removes = new List<string>();
             foreach (var client in RootFS.ClientList)
             {
-                if (client.Value is AliyunOSSFileSystemClient instance)
+                if (client.Value is AliyunOSSFileSystemClient aliyunOssInstance)
                 {
-                    if (StorageProviderInstances.Any(x => x.RuntimeId == instance.RuntimeId))
+                    if (StorageProviderInstances.Any(x => x.RuntimeId == aliyunOssInstance.RuntimeId))
                     {
-                        skips.Add(instance.RuntimeId);
+                        skips.Add(aliyunOssInstance.RuntimeId);
+                    }
+                    else
+                    {
+                        removes.Add(client.Key);
+                    }
+                }
+                else if (client.Value is AzureBlobFileSystemClient azureBlobInstance)
+                {
+                    if (StorageProviderInstances.Any(x => x.RuntimeId == azureBlobInstance.RuntimeId))
+                    {
+                        skips.Add(azureBlobInstance.RuntimeId);
                     }
                     else
                     {
@@ -167,17 +193,20 @@ namespace NSPersonalCloud
             foreach (var item in StorageProviderInstances)
             {
                 if (skips.Contains(item.RuntimeId)) continue;
-                if (item.ProviderInfo.Type == StorageProviderInstance.TypeAliYun && item is StorageProviderInstance_AliyunOSS instance)
+                if (item.ProviderInfo.Type == StorageProviderInstance.TypeAliYun && item is StorageProviderInstance_AliyunOSS aliyunOssInstance)
                 {
-                    InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, instance.OssConfig));
+                    InsertRootFS(item.ProviderInfo.Name, new AliyunOSSFileSystemClient(item.RuntimeId, aliyunOssInstance.OssConfig));
+                }
+                else if (item.ProviderInfo.Type == StorageProviderInstance.TypeAzure && item is StorageProviderInstance_AzureBlob azureBlobInstance)
+                {
+                    InsertRootFS(item.ProviderInfo.Name, new AzureBlobFileSystemClient(item.RuntimeId, azureBlobInstance.AzureBlobConfig));
                 }
             }
         }
 
-        internal async Task OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
+        internal void OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
         {
             bool updated = false;
-            bool deleted = false;
             lock (CachedNodes)
             {
                 var ssdpin = ssdpinfo.FirstOrDefault(x => x.Id == Id);
@@ -223,37 +252,13 @@ namespace NSPersonalCloud
                     if (nremoved > 0)
                     {
                         OnCachedNodesChange();
-                        deleted = true;
+                        updated = true;
                     }
                 }
             }
-            if (updated|| deleted)
+            if (updated)
             {
-                if (!deleted)
-                {
-                    var pci = await GetPeerPCInfo(this, ninfo).ConfigureAwait(false);
-                    foreach (var ai in pci.Apps)
-                    {
-                        NodeInfoForPC n = null;
-                        lock (CachedNodes)
-                        {
-                            n = CachedNodes.FirstOrDefault(x => x.NodeGuid == ai.NodeId);
-                        }
-                        if (n == null)
-                        {
-                            return;
-                        }
-                        var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
-                        if (a==null)
-                        {
-                            lock (Apps)
-                            {
-                                Apps.Add(ai);
-                            }
-                        }
-                    }
-                }
-                _ = Task.Run(() => {
+                Task.Run(() => {
                     try
                     {
                         OnNodeChangedEvent?.Invoke(this, EventArgs.Empty);
@@ -265,24 +270,37 @@ namespace NSPersonalCloud
             }
         }
 
-        Lazy<HttpClient> httpClient;
-        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, NodeInfo ninfo)
+        public void InsertRootFS(string nodeName, AliyunOSSFileSystemClient client)
         {
-            try
+            if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
+            if (client == null) throw new ArgumentNullException(nameof(client));
+
+            string nm = nodeName;
+            string key = nm;
+            if (RootFS.ClientList.ContainsKey(nm))
             {
-                var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
-                var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
-                var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
-                return cfg;
+                //user input duplicated name
+                for (int i = 2; i < int.MaxValue; i++)
+                {
+                    key = $"{nm}({i})";
+                    if (RootFS.ClientList.ContainsKey(key))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        RootFS.ClientList.TryAdd(key, client);
+                        break;
+                    }
+                }
             }
-            catch (Exception e)
+            else
             {
-                logger.LogError("Exception in GetPeerPCInfo", e);
-                return null;
+                RootFS.ClientList.TryAdd(key, client);
             }
         }
 
-        public void InsertRootFS(string nodeName, AliyunOSSFileSystemClient client)
+        public void InsertRootFS(string nodeName, AzureBlobFileSystemClient client)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
             if (client == null) throw new ArgumentNullException(nameof(client));
@@ -455,9 +473,6 @@ namespace NSPersonalCloud
             OnCachedNodesChange();
         }
 
-
-        #region encryptedName
-
         string DecryptName(byte[] en)
         {
             using (var aes = Aes.Create())
@@ -487,6 +502,7 @@ namespace NSPersonalCloud
                 }
             }
         }
+
         byte[] encryptedName;
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] EncryptedName
@@ -533,7 +549,6 @@ namespace NSPersonalCloud
                 }
             }
         }
-        #endregion
 
         #region IDisposable Support
 
@@ -552,7 +567,6 @@ namespace NSPersonalCloud
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
         #endregion
 
     }

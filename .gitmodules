@@ -1,3 +1,6 @@
 [submodule "src/StorageClient.Aliyun"]
 	path = src/StorageClient.Aliyun
 	url = https://github.com/Personal-Cloud/StorageClient.Aliyun.git
+[submodule "src/StorageClient.Azure"]
+	path = src/StorageClient.Azure
+	url = https://github.com/Personal-Cloud/StorageClient.Azure.git
