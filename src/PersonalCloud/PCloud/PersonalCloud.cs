@@ -78,6 +78,16 @@ namespace NSPersonalCloud
                 Apps.Add(appl);
             }
         }
+
+        internal string GetWebAppUri(AppLauncher appl)
+        {
+            var node = CachedNodes.FirstOrDefault(x => x.NodeGuid == appl.NodeId);
+            if (node==null)
+            {
+                return null;
+            }
+            return $"{node.Url}{appl.WebAddress}?AccessKey={appl.AccessKey}";
+        }
         #endregion
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
