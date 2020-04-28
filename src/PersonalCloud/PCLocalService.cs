@@ -427,7 +427,10 @@ namespace NSPersonalCloud
         }
         private void SavePCList()
         {
-            ConfigStorage.SaveCloud(_PersonalClouds.Select(x => PersonalCloudInfo.FromPersonalCloud(x)));
+            lock (_PersonalClouds)
+            {
+                ConfigStorage.SaveCloud(_PersonalClouds.Select(x => PersonalCloudInfo.FromPersonalCloud(x)));
+            }
         }
 
         private void LoadPCList()
@@ -444,7 +447,12 @@ namespace NSPersonalCloud
 
         public List<StorageProviderInstance> GetStorageProviderInstances(string cloudId)
         {
-            var personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+            PersonalCloud personalCloud = null;
+
+            lock (_PersonalClouds)
+            {
+                personalCloud = _PersonalClouds.Where(x => x.Id == cloudId).FirstOrDefault();
+            }
 
             if (personalCloud != null)
             {
@@ -458,7 +466,12 @@ namespace NSPersonalCloud
 
         public bool AddStorageProvider(string cloudId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility, bool saveChanges = true)
         {
-            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            PersonalCloud personalCloud = null;
+
+            lock (_PersonalClouds)
+            {
+                personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            }
 
             if (personalCloud != null)
             {
@@ -477,7 +490,12 @@ namespace NSPersonalCloud
 
         public bool AddStorageProvider(string cloudId, string nodeName, AzureBlobConfig azureConfig, StorageProviderVisibility visibility, bool saveChanges = true)
         {
-            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            PersonalCloud personalCloud = null;
+
+            lock (_PersonalClouds)
+            {
+                personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            }
 
             if (personalCloud != null)
             {
@@ -496,7 +514,12 @@ namespace NSPersonalCloud
 
         public bool RemoveStorageProvider(string cloudId, string nodeName, bool saveChanges = true)
         {
-            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            PersonalCloud personalCloud = null;
+
+            lock (_PersonalClouds)
+            {
+                personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+            }
 
             if (personalCloud != null)
             {
