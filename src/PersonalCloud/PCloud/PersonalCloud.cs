@@ -66,11 +66,12 @@ namespace NSPersonalCloud
         public long UpdateTimeStamp { get; set; }
 
         internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
-                internal List<StorageProviderInstance> StorageProviderInstances { get; }
+        internal List<StorageProviderInstance> StorageProviderInstances { get; }
 
         #region Apps
 
         public List<AppLauncher> Apps { get; internal set; }
+
         internal void AddApp(AppLauncher appl)
         {
             lock (Apps)
@@ -79,16 +80,18 @@ namespace NSPersonalCloud
             }
         }
 
-        internal string GetWebAppUri(AppLauncher appl)
+        public Uri GetWebAppUri(AppLauncher launcher)
         {
-            var node = CachedNodes.FirstOrDefault(x => x.NodeGuid == appl.NodeId);
-            if (node==null)
-            {
-                return null;
-            }
-            return $"{node.Url}{appl.WebAddress}?AccessKey={appl.AccessKey}";
+            if (launcher is null) throw new ArgumentNullException(nameof(launcher));
+
+            var node = CachedNodes.FirstOrDefault(x => x.NodeGuid == launcher.NodeId);
+            if (node is null) return null;
+
+            return new Uri($"{node.Url}{launcher.WebAddress}?AccessKey={launcher.AccessKey}");
         }
+
         #endregion
+
         //Cloud password
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] MasterKey { get; set; }
@@ -114,19 +117,16 @@ namespace NSPersonalCloud
 
             lock (StorageProviderInstances)
             {
-                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
-                {
-                    var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
-                        Type = StorageProviderInstance.TypeAliYun,
-                        Name = nodeName,
-                        Visibility = visibility,
-                        Settings = JsonConvert.SerializeObject(ossConfig)
-                    });
-                    StorageProviderInstances.Add(instance);
-                    ResyncClientListToStorageProviderInstances();
-                    return true;
-                }
-                return false;
+                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
+                    Type = StorageProviderInstance.TypeAliYun,
+                    Name = nodeName,
+                    Visibility = visibility,
+                    Settings = JsonConvert.SerializeObject(ossConfig)
+                });
+                StorageProviderInstances.Add(instance);
+                ResyncClientListToStorageProviderInstances();
+                return true;
             }
         }
 
@@ -137,19 +137,16 @@ namespace NSPersonalCloud
 
             lock (StorageProviderInstances)
             {
-                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
-                {
-                    var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
-                        Type = StorageProviderInstance.TypeAzure,
-                        Name = nodeName,
-                        Visibility = visibility,
-                        Settings = JsonConvert.SerializeObject(azureBlobConfig)
-                    });
-                    StorageProviderInstances.Add(instance);
-                    ResyncClientListToStorageProviderInstances();
-                    return true;
-                }
-                return false;
+                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                    Type = StorageProviderInstance.TypeAzure,
+                    Name = nodeName,
+                    Visibility = visibility,
+                    Settings = JsonConvert.SerializeObject(azureBlobConfig)
+                });
+                StorageProviderInstances.Add(instance);
+                ResyncClientListToStorageProviderInstances();
+                return true;
             }
         }
 
@@ -160,7 +157,7 @@ namespace NSPersonalCloud
             lock (StorageProviderInstances)
             {
                 var item = StorageProviderInstances
-                    .Where(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0)
+                    .Where(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))
                     .FirstOrDefault();
                 if (item != null)
                 {
@@ -280,7 +277,7 @@ namespace NSPersonalCloud
                     }
                 }
             }
-            if (updated|| deleted)
+            if (updated || deleted)
             {
                 if (!deleted)
                 {
@@ -297,7 +294,7 @@ namespace NSPersonalCloud
                             return;
                         }
                         var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
-                        if (a==null)
+                        if (a == null)
                         {
                             lock (Apps)
                             {
