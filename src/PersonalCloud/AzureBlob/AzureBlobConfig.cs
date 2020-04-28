@@ -1,5 +1,5 @@
 ﻿using System;
-using Aliyun.OSS;
+
 using Azure.Storage.Blobs;
 
 namespace NSPersonalCloud.FileSharing.Aliyun
