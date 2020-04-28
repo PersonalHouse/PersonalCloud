@@ -1,5 +1,6 @@
 ﻿using System;
-using Aliyun.OSS;
+using System.Linq;
+
 using Azure.Storage.Blobs;
 
 namespace NSPersonalCloud.FileSharing.Aliyun
@@ -26,7 +27,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             try
             {
                 var client = new BlobContainerClient(config.ConnectionString, config.BlobName);
-                var info = client.GetProperties();
+                var info = client.GetBlobsByHierarchy(prefix: "", delimiter: "/").AsPages(pageSizeHint: 1).FirstOrDefault();
                 return info != null;
             }
             catch
