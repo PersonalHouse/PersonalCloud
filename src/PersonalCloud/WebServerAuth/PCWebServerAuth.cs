@@ -39,6 +39,11 @@ namespace NSPersonalCloud.FileSharing
                     return Task.FromResult(Auth.NoUser);
                 }
                 var ts = long.Parse(tsstr, CultureInfo.InvariantCulture);
+                var delta = Math.Abs(DateTime.UtcNow.ToFileTime() - ts);
+                if (delta>(10L*60*10000000))//10mins
+                {
+                    return Task.FromResult(Auth.NoUser);
+                }
 
 
                 var hashstr = context.Request.Headers[AuthDefinitions.AuthenticationHash].Trim();
