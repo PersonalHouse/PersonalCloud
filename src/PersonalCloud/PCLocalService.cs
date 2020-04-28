@@ -475,6 +475,25 @@ namespace NSPersonalCloud
             }
         }
 
+        public bool AddStorageProvider(string cloudId, string nodeName, AzureBlobConfig azureConfig, StorageProviderVisibility visibility, bool saveChanges = true)
+        {
+            var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);
+
+            if (personalCloud != null)
+            {
+                var haveChanges = personalCloud.AddStorageProvider(nodeName, azureConfig, visibility);
+                if (haveChanges && saveChanges)
+                {
+                    SavePCList();
+                }
+                return haveChanges;
+            }
+            else
+            {
+                throw new NoSuchCloudException();
+            }
+        }
+
         public bool RemoveStorageProvider(string cloudId, string nodeName, bool saveChanges = true)
         {
             var personalCloud = _PersonalClouds.FirstOrDefault(x => x.Id == cloudId);

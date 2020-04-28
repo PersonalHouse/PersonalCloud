@@ -117,19 +117,16 @@ namespace NSPersonalCloud
 
             lock (StorageProviderInstances)
             {
-                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
-                {
-                    var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
-                        Type = StorageProviderInstance.TypeAliYun,
-                        Name = nodeName,
-                        Visibility = visibility,
-                        Settings = JsonConvert.SerializeObject(ossConfig)
-                    });
-                    StorageProviderInstances.Add(instance);
-                    ResyncClientListToStorageProviderInstances();
-                    return true;
-                }
-                return false;
+                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
+                    Type = StorageProviderInstance.TypeAliYun,
+                    Name = nodeName,
+                    Visibility = visibility,
+                    Settings = JsonConvert.SerializeObject(ossConfig)
+                });
+                StorageProviderInstances.Add(instance);
+                ResyncClientListToStorageProviderInstances();
+                return true;
             }
         }
 
@@ -140,19 +137,16 @@ namespace NSPersonalCloud
 
             lock (StorageProviderInstances)
             {
-                if (!StorageProviderInstances.Any(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0))
-                {
-                    var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
-                        Type = StorageProviderInstance.TypeAzure,
-                        Name = nodeName,
-                        Visibility = visibility,
-                        Settings = JsonConvert.SerializeObject(azureBlobConfig)
-                    });
-                    StorageProviderInstances.Add(instance);
-                    ResyncClientListToStorageProviderInstances();
-                    return true;
-                }
-                return false;
+                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                    Type = StorageProviderInstance.TypeAzure,
+                    Name = nodeName,
+                    Visibility = visibility,
+                    Settings = JsonConvert.SerializeObject(azureBlobConfig)
+                });
+                StorageProviderInstances.Add(instance);
+                ResyncClientListToStorageProviderInstances();
+                return true;
             }
         }
 
@@ -163,7 +157,7 @@ namespace NSPersonalCloud
             lock (StorageProviderInstances)
             {
                 var item = StorageProviderInstances
-                    .Where(x => string.Compare(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase) == 0)
+                    .Where(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))
                     .FirstOrDefault();
                 if (item != null)
                 {
