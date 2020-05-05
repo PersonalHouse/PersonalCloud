@@ -87,7 +87,8 @@ namespace NSPersonalCloud
             var node = CachedNodes.FirstOrDefault(x => x.NodeGuid == launcher.NodeId);
             if (node is null) return null;
 
-            return new Uri($"{node.Url}{launcher.WebAddress}?AccessKey={launcher.AccessKey}");
+            var nu = node.Url[node.Url.Length - 1] == '/' ? node.Url.Substring(0, node.Url.Length - 1) : node.Url;
+            return new Uri($"{nu}{launcher.WebAddress}?AccKey={launcher.AccessKey}");
         }
 
         #endregion
@@ -282,23 +283,26 @@ namespace NSPersonalCloud
                 if (!deleted)
                 {
                     var pci = await GetPeerPCInfo(this, ninfo).ConfigureAwait(false);
-                    foreach (var ai in pci.Apps)
+                    if ((pci != null) && (pci.Apps != null))
                     {
-                        NodeInfoForPC n = null;
-                        lock (CachedNodes)
+                        foreach (var ai in pci.Apps)
                         {
-                            n = CachedNodes.FirstOrDefault(x => x.NodeGuid == ai.NodeId);
-                        }
-                        if (n == null)
-                        {
-                            return;
-                        }
-                        var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
-                        if (a == null)
-                        {
-                            lock (Apps)
+                            NodeInfoForPC n = null;
+                            lock (CachedNodes)
                             {
-                                Apps.Add(ai);
+                                n = CachedNodes.FirstOrDefault(x => x.NodeGuid == ai.NodeId);
+                            }
+                            if (n == null)
+                            {
+                                return;
+                            }
+                            var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
+                            if (a == null)
+                            {
+                                lock (Apps)
+                                {
+                                    Apps.Add(ai);
+                                }
                             }
                         }
                     }

@@ -37,14 +37,11 @@ export class NavMenu extends React.Component<IProps, IState> {
             <Collapse className="d-sm-inline-flex flex-sm-row-reverse" isOpen={!this.state.collapsed} navbar>
               <ul className="navbar-nav flex-grow">
                 <NavItem>
-                  <NavLink tag={Link} className="text-dark" to="/">By date</NavLink>
+                  <NavLink tag={Link} className="text-dark" to="/">Time line</NavLink>
                 </NavItem>
-                <NavItem>
-                  <NavLink tag={Link} className="text-dark" to="/map">By address</NavLink>
-                </NavItem>
-                <NavItem>
-                  <NavLink tag={Link} className="text-dark" to="/fetch-data">Fetch data</NavLink>
-                </NavItem>
+                {/* <NavItem>
+                  <NavLink tag={Link} className="text-dark" to="/map">Mao</NavLink>
+                </NavItem> */}
               </ul>
             </Collapse>
           </Container>

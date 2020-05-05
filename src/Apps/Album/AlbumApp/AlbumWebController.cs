@@ -25,7 +25,12 @@ namespace NSPersonalCloud.Apps.Album
         }
         AlbumConfig AuthAndGetConfig()
         {
-            return _authCb("");
+            var key = HttpContext?.Request?.Cookies["AccKey"];
+            if (key==null)
+            {
+                return null;
+            }
+            return _authCb(key.Value);
         }
         [Route(HttpVerbs.Get, "/GetDays")]
         public async Task GetDays()

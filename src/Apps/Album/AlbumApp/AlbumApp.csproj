@@ -6,11 +6,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="album.zip" />
     <None Remove="build.zip" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="build.zip" />
+    <EmbeddedResource Include="album.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>

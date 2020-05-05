@@ -7,6 +7,8 @@ import "lightgallery.js/dist/css/lightgallery.css";
 import './Home.css';
 
 
+
+
 interface ImageInfo {
   Id: number,
   Path: string,
@@ -61,7 +63,7 @@ export class MediaBox extends React.Component<IMediaBoxProps, IMediaBoxState> {
     let query = Object.keys(params)
       .map((k: string) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]))
       .join('&');
-    let url = "/api/Apps/album/GetMediaInDay?" + query;
+    let url = "/api/Apps/Album/GetMediaInDay?" + query;
 
     
     let response = await fetch(url);
@@ -75,7 +77,7 @@ export class MediaBox extends React.Component<IMediaBoxProps, IMediaBoxState> {
         x.Height = 1;
       }
       return {
-        src: "/api/Apps/album/GetMediaThumbnail?id=" + x.Id,
+        src: "/api/Apps/Album/GetMediaThumbnail?id=" + x.Id,
         title: x.Path,
         width: x.Width,
         height: x.Height,
@@ -93,20 +95,20 @@ export class MediaBox extends React.Component<IMediaBoxProps, IMediaBoxState> {
       if (x.IsVideo > 0) {
         return {
           html: "#vid" + x.Id,
-          poster:"/api/Apps/album/GetMediaThumbnail?id=" + x.Id,
+          poster:"/api/Apps/Album/GetMediaThumbnail?id=" + x.Id,
           subHtml: x.Path,
-          downloadUrl: "/api/Apps/album/DownloadMedia?id=" + x.Id,
+          downloadUrl: "/api/Apps/Album/DownloadMedia?id=" + x.Id,
         };
       } else {
-        let rp = "/api/Apps/album/GetMediaThumbnail?id=" + x.Id;
+        let rp = "/api/Apps/Album/GetMediaThumbnail?id=" + x.Id;
         if(x.IsWebImage>0){
-          rp = "/api/Apps/album/GetMedia?id=" + x.Id;
+          rp = "/api/Apps/Album/GetMedia?id=" + x.Id;
         }
         return {
           src: rp ,
-          thumb: "/api/Apps/album/GetMediaThumbnail?id=" + x.Id,
+          thumb: "/api/Apps/Album/GetMediaThumbnail?id=" + x.Id,
           subHtml: x.Path,
-          downloadUrl: "/api/Apps/album/DownloadMedia?id=" + x.Id,
+          downloadUrl: "/api/Apps/Album/DownloadMedia?id=" + x.Id,
         };
       }
     });
@@ -151,7 +153,7 @@ export class MediaBox extends React.Component<IMediaBoxProps, IMediaBoxState> {
         <img className={"playbtn"} alt="" src={require('./playbtn.png')} onClick={handleClick}/>
         <div style={hidestyle} id={"vid" + newimginfo.Id}>
           <video className="lg-video-object lg-html5" controls preload="none">
-            <source src={"/api/Apps/album/GetMedia?id=" + newimginfo.Id} type="video/mp4" />
+            <source src={"/api/Apps/Album/GetMedia?id=" + newimginfo.Id} type="video/mp4" />
                Your browser does not support HTML5 video.
              </video>
         </div>
@@ -292,7 +294,7 @@ export class Home extends React.Component<IProps, IState> {
   }
 
   async populateDays() {
-    let response = await fetch('/api/Apps/album/GetDays');
+    let response = await fetch('/api/Apps/Album/GetDays');
     let data = await response.json();
     let key: string = "";
     for (let curprop in data) {
@@ -310,7 +312,7 @@ export class Home extends React.Component<IProps, IState> {
       let items: ReactNode[] = [];
       let yeatkeys = Object.keys(this.state.days);
       if (yeatkeys.length < 1) {
-        return "No album";
+        return "No Album";
       }
       yeatkeys.sort(function (a, b) { return Number(b) - Number(a); });
       for (let yearprop of yeatkeys) {

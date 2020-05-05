@@ -601,7 +601,7 @@ namespace NSPersonalCloud
 
 
         [Route(HttpVerbs.Get, "/cloud")]
-        public async Task GetCloudInfo()
+        public async Task<PersonalCloudInfo> GetCloudInfo()
         {
             try
             {
@@ -609,21 +609,21 @@ namespace NSPersonalCloud
                 if (string.IsNullOrWhiteSpace(pcid))
                 {
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
-                    return;
+                    return null;
                 }
 
                 var pc = pCService.PersonalClouds.First(x => x.Id == pcid);
                 if (pc == null)
                 {
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
-                    return;
+                    return null;
                 }
-                var pcinfo = PersonalCloudInfo.FromPersonalCloud(pc);
-                SendJsonResponse(pcinfo);
+                return PersonalCloudInfo.FromPersonalCloud(pc);
             }
             catch
             {
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
+                return null;
             }
         }
 

@@ -399,7 +399,7 @@ namespace NSPersonalCloud
             for (var i = 0; i < 100; i++)
             {
 
-                cfg.Port = ran.Next(20000, 30000);
+                cfg.Port = ran.Next(10000, 60000);
                 TcpListener tcpListener = null;
                 try
                 {
@@ -539,10 +539,14 @@ namespace NSPersonalCloud
         #endregion
 
         #region Apps
-
-        static List<IAppManager> GetAppMgrs()
+        List<IAppManager> AppMgrs;
+         List<IAppManager> GetAppMgrs()
         {
-            return new List<IAppManager> { new Apps.Album.AlbumManager() };
+            if (AppMgrs == null)
+            {
+                AppMgrs = new List<IAppManager> { new Apps.Album.AlbumManager() };
+            }
+            return AppMgrs;
         }
         public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
         {
@@ -580,12 +584,16 @@ namespace NSPersonalCloud
         /// </summary>
         /// <param name="webstaticpath"></param>
         /// <returns></returns>
-        public static async Task InstallApps(string webstaticpath)
+        public async Task InstallApps()
         {
+            if (string.IsNullOrWhiteSpace(ExtraWebPath))
+            {
+                throw new InvalidProgramException("extraWebPath must be provide in construtor");
+            }
             var lis = GetAppMgrs();
             foreach (var item in lis)
             {
-                await item.InstallWebStatiFiles(webstaticpath).ConfigureAwait(false);
+                await item.InstallWebStatiFiles(ExtraWebPath).ConfigureAwait(false);
             }
         }
 

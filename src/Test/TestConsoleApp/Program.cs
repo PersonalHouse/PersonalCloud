@@ -109,7 +109,7 @@ namespace TestConsoleApp
                 "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
             pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath),dic);
             Directory.CreateDirectory(dic);
-            PCLocalService.InstallApps(dic).Wait();
+            pcservice.InstallApps().Wait();
 
             pcservice.StartService();
             pc = pcservice.CreatePersonalCloud("test", "test1").Result;

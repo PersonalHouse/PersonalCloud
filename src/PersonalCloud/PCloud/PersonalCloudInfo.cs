@@ -19,7 +19,9 @@ namespace NSPersonalCloud
 #pragma warning restore CA1819 // Properties should not return arrays
 
         public long TimeStamp { get; set; }
-        public List<AppLauncher> Apps { get; internal set; }
+#pragma warning disable CA2227 // Collection properties should be read only  Json Serializer need this
+        public List<AppLauncher> Apps { get; set; }
+#pragma warning restore CA2227 // Collection properties should be read only
 
         public List<StorageProviderInfo> StorageProviders { get; }
 

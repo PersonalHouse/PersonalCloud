@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.WebApi;
@@ -15,11 +18,16 @@ namespace NSPersonalCloud.Apps.Album
 {
     public class AlbumManager : IAppManager
     {
-        Dictionary<string, AlbumConfig> Cache;
-        public AlbumManager()
+        private static readonly Dictionary<string, AlbumConfig> Cache;
+        static AlbumManager()
         {
             Cache = new Dictionary<string, AlbumConfig>();
         }
+        private static Task IndexerTask;
+        CancellationTokenSource cts;
+
+
+
         AlbumConfig GetFromCache(string key)
         {
             lock (Cache)
@@ -89,15 +97,86 @@ namespace NSPersonalCloud.Apps.Album
         {
             Directory.CreateDirectory(path);
             var bf = Path.Combine(path, "Album.zip");
-            ExtractResource(Assembly.GetExecutingAssembly(), "NSPersonalCloud.Apps.Album.build.zip", bf);
+            ExtractResource(Assembly.GetExecutingAssembly(), "NSPersonalCloud.Apps.Album.album.zip", bf);
             ZipFile.ExtractToDirectory(bf, path,true);
             File.Delete(bf);
             return Task.CompletedTask;
         }
 
+        async Task ImageIndexerScheduler()
+        {
+            try
+            {
+                var tk = cts.Token;//local capture
+                var exedir = Path.GetDirectoryName(typeof(AlbumManager).Assembly.Location);
+                var exepath = Path.Combine(exedir, "PersonalCloud.ImageIndexer.exe");
+                while (true)
+                {
+                    tk.ThrowIfCancellationRequested();
+                    List<AlbumConfig> lis = null;
+                    lock (Cache)
+                    {
+                        lis = Cache.Select(x => x.Value).ToList();
+                    }
+                    if (lis != null)
+                    {
+                        foreach (var item in lis)
+                        {
+                            tk.ThrowIfCancellationRequested();
+                            await IndexOneAlbum(exepath, item.MediaFolder, item.ThumbnailFolder, tk);
+                        }
+                    }
+                    tk.ThrowIfCancellationRequested();
+                    await Task.Delay(60 * 60 * 1000, tk);//1 hour
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        async Task IndexOneAlbum(string exepath, string src,string des,  CancellationToken tk)
+        {
+            var si = new ProcessStartInfo(exepath,$" -O {des} -I {src} ");
+            var proc = new Process();
+            proc.StartInfo = si;
+            proc.Start();
+            int i = 0;
+            while (!proc.HasExited)
+            {
+                if (tk.IsCancellationRequested)
+                {
+                    proc.Kill();
+                }
+                await Task.Delay(30 * 1000, tk);
+                
+                if (tk.IsCancellationRequested)
+                {
+                    proc.Kill();
+                }
+                ++i;
+                if (i>(60*2))
+                {
+                    proc.Kill();
+                }
+            }
+        }
 
         public List<AppLauncher> Config(string configjsons)
         {
+            lock (Cache)
+            {
+                Cache.Clear();
+                if (cts!=null)
+                {
+                    cts.Cancel();
+                    cts.Dispose();
+                    IndexerTask.Dispose();
+                    IndexerTask = null;
+                    cts = null;
+                }
+            }
             var cfgs = JsonConvert.DeserializeObject<List<AlbumConfig>>(configjsons);
             var lis = new List<AppLauncher>();
             foreach (var cfg in cfgs)
@@ -113,6 +192,11 @@ namespace NSPersonalCloud.Apps.Album
                 lock (Cache)
                 {
                     Cache.Add(appl.AccessKey, cfg);
+                    if (IndexerTask==null)
+                    {
+                        cts = new CancellationTokenSource();
+                        IndexerTask = Task.Run(ImageIndexerScheduler,cts.Token);
+                    }
                 }
                 lis.Add(appl);
             }

@@ -91,9 +91,9 @@ namespace LocalHosted
                 var t = DateTime.Now;
 
                 var inf1 = new HostPlatformInfo();
-                using (var srv1 = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath)))
+                using (var srv1 = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath), dic))
                 {
-                    PCLocalService.InstallApps(dic).Wait();
+                    srv1.InstallApps().Wait();
 
                     var inf2 = new HostPlatformInfo();
                     using (var srv2 = new PCLocalService(inf2, loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
@@ -112,22 +112,25 @@ namespace LocalHosted
                             }
                         });
 
-                        if (pc1.Apps?.Count != 1)
-                        {
-                            Console.WriteLine($"Install app failed. exit");
-                            return;
-                        }
+                        Assert.AreEqual(pc1.Apps?.Count, 1);
 
                         var ret = srv1.SharePersonalCloud(pc1).Result;
                         Thread.Sleep(3000);
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
 
-                        if (pc2.Apps?.Count != 1)
+                        Assert.AreEqual(pc2.Apps?.Count, 1);
+                        foreach (var item in pc2.Apps)
                         {
-                            Console.WriteLine($"Install app failed. exit");
-                            return;
+                            var url = pc2.GetWebAppUri(item);
+                            if (string.IsNullOrWhiteSpace(url?.AbsoluteUri))
+                            {
+                                Assert.Fail();
+                            }
                         }
+                        Thread.Sleep(9999999);
+                        Thread.Sleep(9999999);
+                        Thread.Sleep(9999999);
                     }
                 }
             }
