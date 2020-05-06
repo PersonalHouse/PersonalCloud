@@ -553,6 +553,23 @@ namespace NSPersonalCloud
             return SetAppMgrConfig("Album", pcid,  JsonConvert.SerializeObject(albcongs));
         }
 
+        public List<Apps.Album.AlbumConfig> GetAlbumConfig(string pcid)
+        {
+            var lis = GetAppMgrs();
+
+            var item = lis.FirstOrDefault(x => x.GetAppId() == "Album");
+            if (item != null)
+            {
+                var s = ConfigStorage.GetApp(item.GetAppId());
+                var json = s.FirstOrDefault(x => x.Item1 == pcid);
+                if (json != null)
+                {
+                    return JsonConvert.DeserializeObject<List<Apps.Album.AlbumConfig>>(json.Item2);
+                }
+            }
+            return new List<Apps.Album.AlbumConfig>();
+        }
+
         public Task SetAppMgrConfig(string appid, string pcid, string jsonconfig)
         {
             var lis = GetAppMgrs();
@@ -612,7 +629,7 @@ namespace NSPersonalCloud
                         PersonalCloud pc = null;
                         lock (_PersonalClouds)
                         {
-                            pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcc.Item2);
+                            pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcc.Item1);
                         }
                         if (pc != null)
                         {
