@@ -15,11 +15,6 @@ namespace NSPersonalCloud
 
         void SaveApp(string appid, string pcid,string jsonconfigs);
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="appid"></param>
-        /// <returns>list of pcid,json string</returns>
-        List<Tuple<string,string>> GetApp(string appid);
+        List<(string,string)> GetApp(string appid);
     }
 }
