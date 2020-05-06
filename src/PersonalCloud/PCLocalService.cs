@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -64,7 +63,7 @@ namespace NSPersonalCloud
         readonly List<FetchQueueItem> fetchQueue;
 
         public int ServerPort { get; private set; }
-        
+
         public string NodeId { get; private set; }//guid
         public IReadOnlyList<PersonalCloud> PersonalClouds => _PersonalClouds.AsReadOnly();
 
@@ -80,9 +79,9 @@ namespace NSPersonalCloud
         WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
-        public ShareController CreateShareController() => new ShareController(FileSystem,this);
+        public ShareController CreateShareController() => new ShareController(FileSystem, this);
 
-        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem,string extraWebPath=null)
+        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem, string extraWebPath)
         {
             ExtraWebPath = extraWebPath;
 
@@ -125,8 +124,8 @@ namespace NSPersonalCloud
         {
             context.Response.ContentType = MimeType.Json;
             using var text = context.OpenResponseText(new UTF8Encoding(false));
-//             await text.WriteAsync(System.Text.Json.JsonSerializer.Serialize(data,
-//                 new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
+            //             await text.WriteAsync(System.Text.Json.JsonSerializer.Serialize(data,
+            //                 new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
             await text.WriteAsync(
                 JsonConvert.SerializeObject(data,
                 new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })).ConfigureAwait(false);
@@ -134,7 +133,7 @@ namespace NSPersonalCloud
 
         void InitWebServer()
         {
-            if (WebServer!=null)
+            if (WebServer != null)
             {
                 WebServer.Dispose();
                 WebServer = null;
@@ -143,7 +142,7 @@ namespace NSPersonalCloud
             WebServer = new WebServer(ServerPort);
             WebServer = WebServer
                 .WithModule(new PCWebServerAuth("/api/share", this))
-                .WithWebApi("SSDP", "/clouds", EmbedIOResponseSerializerCallback,module => module.WithController(CreateSSDPServiceController))
+                .WithWebApi("SSDP", "/clouds", EmbedIOResponseSerializerCallback, module => module.WithController(CreateSSDPServiceController))
                 .WithWebApi("Share", "/api/share", EmbedIOResponseSerializerCallback, module => module.WithController(CreateShareController));
             if (!string.IsNullOrWhiteSpace(ExtraWebPath))
             {
@@ -154,7 +153,7 @@ namespace NSPersonalCloud
             {
                 var id = appmgr.GetAppId();
                 WebServer = appmgr.ConfigWebController(id, $"/api/Apps/{id}", WebServer);
-                
+
             }
             WebServer.Start();
 
@@ -222,7 +221,7 @@ namespace NSPersonalCloud
             }
             finally
             {
-                if (curnodeinfo!=null)
+                if (curnodeinfo != null)
                 {
                     lock (fetchQueue)
                     {
@@ -294,7 +293,7 @@ namespace NSPersonalCloud
         {
             lock (sharedPCs)
             {
-                sharedPCs.RemoveAll(x => ((x.NodeId == node.NodeGuid)&& (x.PCId==id)));
+                sharedPCs.RemoveAll(x => ((x.NodeId == node.NodeGuid) && (x.PCId == id)));
             }
         }
 
@@ -378,7 +377,7 @@ namespace NSPersonalCloud
             {
                 foreach (var item in lis)
                 {
-                    _= pc.OnNodeUpdate(item.Value, ssdp);
+                    _ = pc.OnNodeUpdate(item.Value, ssdp);
                 }
             }
         }
@@ -442,7 +441,7 @@ namespace NSPersonalCloud
                 return;
             }
             var l = loggerFactory.CreateLogger("PersonalCloud");
-            _PersonalClouds = saved.Select(x => x.ToPersonalCloud(l,this)).ToList();
+            _PersonalClouds = saved.Select(x => x.ToPersonalCloud(l, this)).ToList();
         }
 
         public List<StorageProviderInstance> GetStorageProviderInstances(string cloudId)
@@ -540,7 +539,7 @@ namespace NSPersonalCloud
 
         #region Apps
         List<IAppManager> AppMgrs;
-         List<IAppManager> GetAppMgrs()
+        List<IAppManager> GetAppMgrs()
         {
             if (AppMgrs == null)
             {
@@ -550,14 +549,14 @@ namespace NSPersonalCloud
         }
         public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
         {
-            return SetAppMgrConfig("Album", pcid,  JsonConvert.SerializeObject(albcongs));
+            return SetAppMgrConfig("Album", pcid, JsonConvert.SerializeObject(albcongs));
         }
 
         public Task SetAppMgrConfig(string appid, string pcid, string jsonconfig)
         {
             var lis = GetAppMgrs();
             var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
-            if (appmgr!=null)
+            if (appmgr != null)
             {
                 var appls = appmgr.Config(jsonconfig);
                 ConfigStorage.SaveApp(appid, pcid, jsonconfig);
@@ -630,7 +629,7 @@ namespace NSPersonalCloud
         public async Task<PersonalCloud> CreatePersonalCloud(string displayName, string nodedisplaryname)
         {
             var l = loggerFactory.CreateLogger("PersonalCloud");
-            var pc = new PersonalCloud(l,this, null) {
+            var pc = new PersonalCloud(l, this, null) {
                 Id = Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture),
                 UpdateTimeStamp = DateTime.UtcNow.ToFileTime(),
                 NodeDisplayName = nodedisplaryname,
@@ -719,7 +718,7 @@ namespace NSPersonalCloud
                 spc = sharedPCs.FirstOrDefault(x => x.Hash == hcode);
             }
 
-            if (spc!=null)
+            if (spc != null)
             {
                 var ts = DateTime.UtcNow.ToFileTime();
                 data = BitConverter.GetBytes(ts + code);
@@ -735,9 +734,9 @@ namespace NSPersonalCloud
                         throw new InviteNotAcceptedException();
                     }
                     var l = loggerFactory.CreateLogger("PersonalCloud");
-                    var pc = pci.ToPersonalCloud(l,this);
+                    var pc = pci.ToPersonalCloud(l, this);
                     pc.NodeDisplayName = nodedisplayname;
-                    pc.OnNodeAdded(spc,pci.NodeDisplayName,pci.TimeStamp);
+                    pc.OnNodeAdded(spc, pci.NodeDisplayName, pci.TimeStamp);
                     lock (_PersonalClouds)
                     {
                         _PersonalClouds.Add(pc);
@@ -746,7 +745,7 @@ namespace NSPersonalCloud
                     lock (KnownNodes)
                     {
                         KnownNodes.Clear();
-                    }                    
+                    }
                     await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
                     nodeDiscovery.StartSearch();
                     logger.LogDebug($"Join {pc.DisplayName}");
@@ -771,7 +770,7 @@ namespace NSPersonalCloud
         //forcerestart will make current http request failed.
         public void StartNetwork(bool forcerestart)
         {
-            if (forcerestart || (WebServer==null)|| (WebServer.State != WebServerState.Listening)|| (nodeDiscovery.State != NodeDiscoveryState.Listening))
+            if (forcerestart || (WebServer == null) || (WebServer.State != WebServerState.Listening) || (nodeDiscovery.State != NodeDiscoveryState.Listening))
             {
                 InitWebServer();
                 nodeDiscovery.StopNetwork();
@@ -826,7 +825,7 @@ namespace NSPersonalCloud
         }
 
         //Seting multicast ports.for internal use only
-        public void SetUdpPort(int bport,int[] tport)
+        public void SetUdpPort(int bport, int[] tport)
         {
             nodeDiscovery.TargetPort = tport;
             nodeDiscovery.BindPort = bport;
