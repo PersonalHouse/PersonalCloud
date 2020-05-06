@@ -287,15 +287,15 @@ namespace NSPersonalCloud
                     using var source = await fileSystem.ReadFileAsync(path).ConfigureAwait(false);
                     HttpContext.Response.Headers.Add(AuthDefinitions.HttpFileLength, (source.Length + 8).ToString(CultureInfo.InvariantCulture));
 
+#pragma warning disable CA1308 // Extension map is lowercase keyed.
+                    HttpContext.Response.ContentType = MimeType.Associations.TryGetValue(Path.GetExtension(path)?.ToLowerInvariant(), out var mime) ? mime : MimeType.Default;
+#pragma warning restore CA1308
+
                     using var target = HttpContext.OpenResponseStream(false, false);
                     using var strm = new WriteStream(target, source.Length);
 
                     await source.CopyToAsync(strm).ConfigureAwait(false);
                     strm.Dispose();
-
-#pragma warning disable CA1308 // Extension map is lowercase keyed.
-                    HttpContext.Response.ContentType = MimeType.Associations.TryGetValue(Path.GetExtension(path)?.ToLowerInvariant(), out var mime) ? mime : MimeType.Default;
-#pragma warning restore CA1308
                 }
                 catch (InvalidOperationException e)
                 {
