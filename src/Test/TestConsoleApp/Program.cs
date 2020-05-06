@@ -87,7 +87,7 @@ namespace TestConsoleApp
             var t2 = new SimpleConfigStorage(
                 Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), 
                 "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
-            pcservice = new PCLocalService(t2, loggerFactory, new VirtualFileSystem(t2.RootPath));
+            pcservice = new PCLocalService(t2, loggerFactory, new VirtualFileSystem(t2.RootPath),null);
             //pcservice.SetUdpPort(2330, new[] { 2330 });
             pcservice.StartService();
 

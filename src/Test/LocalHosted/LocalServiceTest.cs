@@ -25,7 +25,7 @@ namespace LocalHosted
             {
                 var inf = new HostPlatformInfo();
                 using (var srv = new PCLocalService(inf,
-                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
                     var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
@@ -47,11 +47,11 @@ namespace LocalHosted
 
                 var inf1 = new HostPlatformInfo();
                 using (var srv1 = new PCLocalService(inf1,
-                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder())))
+                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder()), null))
                 {
                     var inf2 = new HostPlatformInfo();
                     using (var srv2 = new PCLocalService(inf2,
-                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
                     {
                         srv1.StartService();
                         srv2.StartService();
@@ -96,7 +96,7 @@ namespace LocalHosted
                     srv1.InstallApps().Wait();
 
                     var inf2 = new HostPlatformInfo();
-                    using (var srv2 = new PCLocalService(inf2, loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    using (var srv2 = new PCLocalService(inf2, loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
                     {
                         srv1.StartService();
                         srv2.StartService();
@@ -152,7 +152,7 @@ namespace LocalHosted
                 l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
                 var inf1 = new HostPlatformInfo();
                 using (var srv1 = new PCLocalService(inf1,
-                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder())))
+                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder()), null))
                 {
                     srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
@@ -163,7 +163,7 @@ namespace LocalHosted
                     
                     var inf2 = new HostPlatformInfo();
                     using (var srv2 = new PCLocalService(inf2,
-                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
                     {
                         srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
@@ -198,7 +198,7 @@ namespace LocalHosted
                 for (int i = 0; i < count; i++)
                 {
                     inf[i] = new HostPlatformInfo();
-                    srv[i] = new PCLocalService(inf[i], loggerFactory, new VirtualFileSystem(inf[i].GetConfigFolder()));
+                    srv[i] = new PCLocalService(inf[i], loggerFactory, new VirtualFileSystem(inf[i].GetConfigFolder()), null);
                     ports[i] = 2000 + i;
                 }
 
@@ -246,7 +246,7 @@ namespace LocalHosted
             {
                 var inf = new HostPlatformInfo();
                 using (var srv = new PCLocalService(inf,
-                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
                     var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
@@ -274,7 +274,7 @@ namespace LocalHosted
             {
                 var inf = new HostPlatformInfo();
                 using (var srv = new PCLocalService(inf,
-                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
                     var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
@@ -314,7 +314,7 @@ namespace LocalHosted
                 l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
                 var inf1 = new HostPlatformInfo();
                 using (var srv1 = new PCLocalService(inf1,
-                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder())))
+                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder()), null))
                 {
                     srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
@@ -325,7 +325,7 @@ namespace LocalHosted
 
                     var inf2 = new HostPlatformInfo();
                     using (var srv2 = new PCLocalService(inf2,
-                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
                     {
                         srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
@@ -366,7 +366,7 @@ namespace LocalHosted
                 l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
                 var inf1 = new HostPlatformInfo();
                 using (var srv1 = new PCLocalService(inf1,
-                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder())))
+                 loggerFactory, new VirtualFileSystem(inf1.GetConfigFolder()), null))
                 {
                     srv1.TestSetReannounceTime(3 * 1000);
                     srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
@@ -378,7 +378,7 @@ namespace LocalHosted
 
                     var inf2 = new HostPlatformInfo();
                     using (var srv2 = new PCLocalService(inf2,
-                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder())))
+                    loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
                     {
                         srv2.TestSetReannounceTime(3 * 1000);
                         srv2.SetUdpPort(nport2, new[] { nport2, nport1 });

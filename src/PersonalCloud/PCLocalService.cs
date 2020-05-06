@@ -556,15 +556,11 @@ namespace NSPersonalCloud
         {
             var lis = GetAppMgrs();
 
-            var item = lis.FirstOrDefault(x => x.GetAppId() == "Album");
-            if (item != null)
+            var s = ConfigStorage.GetApp("Album");
+            var (pcidloc, json) = s.FirstOrDefault(x => x.Item1 == pcid);
+            if (json != null)
             {
-                var s = ConfigStorage.GetApp(item.GetAppId());
-                var json = s.FirstOrDefault(x => x.Item1 == pcid);
-                if (json != null)
-                {
-                    return JsonConvert.DeserializeObject<List<Apps.Album.AlbumConfig>>(json.Item2);
-                }
+                return JsonConvert.DeserializeObject<List<Apps.Album.AlbumConfig>>(json);
             }
             return new List<Apps.Album.AlbumConfig>();
         }
