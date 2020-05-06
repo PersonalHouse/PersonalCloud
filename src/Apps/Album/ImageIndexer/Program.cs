@@ -3,10 +3,12 @@ using System.Threading.Tasks;
 
 namespace NSPersonalCloud.Apps.Album.ImageIndexer
 {
-    class Program
+    internal class Program
     {
-        static async Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
+            SQLitePCL.Batteries_V2.Init();
+
             string indexpath = null;
             string inputfolder = null;
             for (int i = 0; i < args.Length; i++)
@@ -16,9 +18,11 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                     case "-O"://output
                         indexpath = args[++i];
                         break;
+
                     case "-I":
                         inputfolder = args[++i];
                         break;
+
                     default:
                         OutputUsage();
                         return;

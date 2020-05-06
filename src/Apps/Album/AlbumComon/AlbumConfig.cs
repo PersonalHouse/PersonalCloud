@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NSPersonalCloud.Apps.Album
+﻿namespace NSPersonalCloud.Apps.Album
 {
     public class AlbumConfig
     {
-        public string Name;
-        public string MediaFolder;
-        public string ThumbnailFolder;
+        public string Name { get; set; }
+        public string MediaFolder { get; set; }
+        public string ThumbnailFolder { get; set; }
     }
 }
