@@ -26,6 +26,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             }
             if (string.IsNullOrWhiteSpace(indexpath) || string.IsNullOrWhiteSpace(inputfolder))
             {
+                Console.WriteLine("Input empty path");
                 OutputUsage();
                 return;
             }
