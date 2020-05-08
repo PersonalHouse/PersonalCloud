@@ -111,15 +111,16 @@ namespace NSPersonalCloud
 
         public RootFileSystem RootFS { get; private set; }
 
-        public bool AddStorageProvider(string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility)
+        public bool AddStorageProvider(Guid nodeId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
             if (ossConfig == null) throw new ArgumentNullException(nameof(ossConfig));
 
             lock (StorageProviderInstances)
             {
-                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                if (StorageProviderInstances.Any(x => nodeId.Equals(x.RuntimeId) || string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
                 var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
+                    Id = nodeId,
                     Type = StorageProviderInstance.TypeAliYun,
                     Name = nodeName,
                     Visibility = visibility,
@@ -131,15 +132,16 @@ namespace NSPersonalCloud
             }
         }
 
-        public bool AddStorageProvider(string nodeName, AzureBlobConfig azureBlobConfig, StorageProviderVisibility visibility)
+        public bool AddStorageProvider(Guid nodeId, string nodeName, AzureBlobConfig azureBlobConfig, StorageProviderVisibility visibility)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
             if (azureBlobConfig == null) throw new ArgumentNullException(nameof(azureBlobConfig));
 
             lock (StorageProviderInstances)
             {
-                if (StorageProviderInstances.Any(x => string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
+                if (StorageProviderInstances.Any(x => nodeId.Equals(x.RuntimeId) || string.Equals(x.ProviderInfo.Name, nodeName, StringComparison.InvariantCultureIgnoreCase))) return false;
                 var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                    Id = nodeId,
                     Type = StorageProviderInstance.TypeAzure,
                     Name = nodeName,
                     Visibility = visibility,
@@ -283,6 +285,54 @@ namespace NSPersonalCloud
                 if (!deleted)
                 {
                     var pci = await GetPeerPCInfo(this, ninfo).ConfigureAwait(false);
+                    if ((pci != null) && (pci.StorageProviders != null))
+                    {
+                        bool needResync = false;
+                        foreach (var sp in pci.StorageProviders)
+                        {
+                            if (sp.Visibility != StorageProviderVisibility.Public) continue;
+                            if (sp.Type == StorageProviderInstance.TypeAliYun)
+                            {
+                                lock (StorageProviderInstances)
+                                {
+                                    if (!StorageProviderInstances.Any(x => sp.Id.Equals(x.RuntimeId)))
+                                    {
+                                        var instance = new StorageProviderInstance_AliyunOSS(new StorageProviderInfo {
+                                            Id = sp.Id,
+                                            Type = StorageProviderInstance.TypeAliYun,
+                                            Name = sp.Name,
+                                            Visibility = sp.Visibility,
+                                            Settings = sp.Settings
+                                        });
+                                        StorageProviderInstances.Add(instance);
+                                        needResync = true;
+                                    }
+                                }
+                            }
+                            if (sp.Type == StorageProviderInstance.TypeAzure)
+                            {
+                                lock (StorageProviderInstances)
+                                {
+                                    if (!StorageProviderInstances.Any(x => sp.Id.Equals(x.RuntimeId)))
+                                    {
+                                        var instance = new StorageProviderInstance_AzureBlob(new StorageProviderInfo {
+                                            Id = sp.Id,
+                                            Type = StorageProviderInstance.TypeAzure,
+                                            Name = sp.Name,
+                                            Visibility = sp.Visibility,
+                                            Settings = sp.Settings
+                                        });
+                                        StorageProviderInstances.Add(instance);
+                                        needResync = true;
+                                    }
+                                }
+                            }
+                        }
+                        if (needResync)
+                        {
+                            ResyncClientListToStorageProviderInstances();
+                        }
+                    }
                     if ((pci != null) && (pci.Apps != null))
                     {
                         foreach (var ai in pci.Apps)

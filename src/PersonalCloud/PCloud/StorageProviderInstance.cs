@@ -16,7 +16,8 @@ namespace NSPersonalCloud
 
         public StorageProviderInstance(StorageProviderInfo providerInfo)
         {
-            RuntimeId = Guid.NewGuid();
+            if (providerInfo == null) throw new ArgumentNullException(nameof(providerInfo));
+            RuntimeId = providerInfo.Id;
             ProviderInfo = providerInfo ?? throw new ArgumentNullException(nameof(providerInfo));
         }
     }

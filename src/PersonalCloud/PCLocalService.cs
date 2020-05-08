@@ -463,7 +463,7 @@ namespace NSPersonalCloud
             }
         }
 
-        public bool AddStorageProvider(string cloudId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility, bool saveChanges = true)
+        public bool AddStorageProvider(string cloudId, Guid nodeId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility, bool saveChanges = true)
         {
             PersonalCloud personalCloud = null;
 
@@ -474,7 +474,7 @@ namespace NSPersonalCloud
 
             if (personalCloud != null)
             {
-                bool haveChanges = personalCloud.AddStorageProvider(nodeName, ossConfig, visibility);
+                bool haveChanges = personalCloud.AddStorageProvider(nodeId, nodeName, ossConfig, visibility);
                 if (haveChanges && saveChanges)
                 {
                     SavePCList();
@@ -487,7 +487,7 @@ namespace NSPersonalCloud
             }
         }
 
-        public bool AddStorageProvider(string cloudId, string nodeName, AzureBlobConfig azureConfig, StorageProviderVisibility visibility, bool saveChanges = true)
+        public bool AddStorageProvider(string cloudId, Guid nodeId, string nodeName, AzureBlobConfig azureConfig, StorageProviderVisibility visibility, bool saveChanges = true)
         {
             PersonalCloud personalCloud = null;
 
@@ -498,7 +498,7 @@ namespace NSPersonalCloud
 
             if (personalCloud != null)
             {
-                var haveChanges = personalCloud.AddStorageProvider(nodeName, azureConfig, visibility);
+                var haveChanges = personalCloud.AddStorageProvider(nodeId, nodeName, azureConfig, visibility);
                 if (haveChanges && saveChanges)
                 {
                     SavePCList();
