@@ -100,16 +100,11 @@ namespace NSPersonalCloud
 
         public event EventHandler OnNodeChangedEvent;
 
-        internal string CurrentShareCode;
-        internal string GenerateShareCode()
-        {
-            var ran = new Random();
-            var code = ran.Next(1000, 10000);
-            CurrentShareCode = code.ToString(CultureInfo.InvariantCulture);
-            return CurrentShareCode;
-        }
 
         public RootFileSystem RootFS { get; private set; }
+
+        #region Storage client
+
 
         public bool AddStorageProvider(Guid nodeId, string nodeName, OssConfig ossConfig, StorageProviderVisibility visibility)
         {
@@ -224,6 +219,28 @@ namespace NSPersonalCloud
                 {
                     InsertRootFS(item.ProviderInfo.Name, new AzureBlobFileSystemClient(item.RuntimeId, azureBlobInstance.AzureBlobConfig));
                 }
+            }
+        }
+
+        #endregion
+
+
+        #region Node update
+
+        Lazy<HttpClient> httpClient;
+        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, NodeInfo ninfo)
+        {
+            try
+            {
+                var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
+                var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
+                var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
+                return cfg;
+            }
+            catch (Exception e)
+            {
+                logger.LogError("Exception in GetPeerPCInfo", e);
+                return null;
             }
         }
 
@@ -366,23 +383,6 @@ namespace NSPersonalCloud
                     {
                     }
                 });
-            }
-        }
-
-        Lazy<HttpClient> httpClient;
-        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, NodeInfo ninfo)
-        {
-            try
-            {
-                var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
-                var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
-                var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
-                return cfg;
-            }
-            catch (Exception e)
-            {
-                logger.LogError("Exception in GetPeerPCInfo", e);
-                return null;
             }
         }
 
@@ -589,9 +589,19 @@ namespace NSPersonalCloud
             OnCachedNodesChange();
         }
 
+        #endregion
 
-        #region encryptedName
+        #region pc share
 
+
+        internal string CurrentShareCode;
+        internal string GenerateShareCode()
+        {
+            var ran = new Random();
+            var code = ran.Next(1000, 10000);
+            CurrentShareCode = code.ToString(CultureInfo.InvariantCulture);
+            return CurrentShareCode;
+        }
         string DecryptName(byte[] en)
         {
             using (var aes = Aes.Create())

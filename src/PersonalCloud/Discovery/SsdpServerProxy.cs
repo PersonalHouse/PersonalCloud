@@ -266,7 +266,7 @@ namespace NSPersonalCloud
         }
         void ReInitSocket()
         {
-            lock (this)
+            lock (address)
             {
                 sendsocket?.Dispose();
                 listensocket?.Dispose();
@@ -284,7 +284,7 @@ namespace NSPersonalCloud
             var msg = Combine(header, messageData);
             Socket so;
 
-            lock (this)
+            lock (address)
             {
                 so = sendsocket;
             }
@@ -319,12 +319,12 @@ namespace NSPersonalCloud
                 {
                     if (sendsocket != null)
                     {
-                        udpMulticastServer.CloseSocket(sendsocket);
+                        UdpMulticastServer.CloseSocket(sendsocket);
                         sendsocket = null;
                     }
                     if (listensocket != null)
                     {
-                        udpMulticastServer.CloseSocket(listensocket);
+                        UdpMulticastServer.CloseSocket(listensocket);
                         listensocket = null;
                     }
                 }

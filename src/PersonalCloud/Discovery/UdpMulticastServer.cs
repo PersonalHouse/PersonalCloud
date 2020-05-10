@@ -101,7 +101,7 @@ namespace NSPersonalCloud
                 });                    
             }
         }
-        internal void CloseSocket(Socket so)
+        static internal void CloseSocket(Socket so)
         {
             so?.Dispose();
         }

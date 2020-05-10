@@ -174,33 +174,6 @@ namespace NSPersonalCloud
 
         }
 
-        async Task<List<IPAddress>> GetExcludeIPAddress()
-        {
-            var ret = new List<IPAddress>();
-            var ipGlobalProperties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
-            foreach (var item in await ipGlobalProperties.GetUnicastAddressesAsync().ConfigureAwait(false))
-            {
-                if (item.SuffixOrigin == System.Net.NetworkInformation.SuffixOrigin.Random)
-                {
-                    ret.Add(item.Address);
-                    continue;
-                }
-                if (item.SuffixOrigin == System.Net.NetworkInformation.SuffixOrigin.WellKnown)
-                {
-                    ret.Add(item.Address);
-                    continue;
-                }
-                var ip = item.Address;
-                var ipbytes = ip.GetAddressBytes();
-                if ((ipbytes[0] >>1)==1 )//2000::/3, global unicase ip
-                {
-                    ret.Add(item.Address);
-                    continue;
-                }
-            }
-            return ret;
-        }
-
 
 
         private void OnTimer(object state)

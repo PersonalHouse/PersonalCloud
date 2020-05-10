@@ -77,9 +77,9 @@ namespace NSPersonalCloud.FileSharing
 
                 lock (_SubFss)
                 {
-                    return new ValueTask<List<FileSystemEntry>>(Task.FromResult(_SubFss.Select(x => new FileSystemEntry {
+                    return new ValueTask<List<FileSystemEntry>>(_SubFss.Select(x => new FileSystemEntry {
                         Name = x.Key
-                    }).ToList()));
+                    }).ToList());
                 }
             }
             else
@@ -96,13 +96,13 @@ namespace NSPersonalCloud.FileSharing
 
                 lock (_SubFss)
                 {
-                    return new ValueTask<List<FileSystemEntry>>(Task.FromResult(
+                    return new ValueTask<List<FileSystemEntry>>(
                         _SubFss
                         .Skip(pageSize* pageIndex)
                         .Take(pageSize)
                         .Select(x => new FileSystemEntry {
                         Name = x.Key
-                    }).ToList()));
+                    }).ToList());
                 }
             }
             else
@@ -113,7 +113,7 @@ namespace NSPersonalCloud.FileSharing
 
         public virtual ValueTask<FreeSpaceInformation> GetFreeSpaceAsync(CancellationToken cancellation)
         {
-            return new ValueTask<FreeSpaceInformation>(Task.FromResult(new FreeSpaceInformation()));
+            return new ValueTask<FreeSpaceInformation>(new FreeSpaceInformation());
         }
 
         public virtual ValueTask<Stream> ReadFileAsync(string path, CancellationToken cancellation)
@@ -136,10 +136,10 @@ namespace NSPersonalCloud.FileSharing
             {
                 lock (_SubFss)
                 {
-                    return new ValueTask<FileSystemEntry>(Task.FromResult(new FileSystemEntry {
+                    return new ValueTask<FileSystemEntry>(new FileSystemEntry {
                         ChildCount = _SubFss.Count,
                         Attributes=FileAttributes.Directory,
-                    }));
+                    });
                 }
             }
             else
