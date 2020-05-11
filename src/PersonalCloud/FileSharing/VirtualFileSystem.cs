@@ -94,6 +94,8 @@ namespace NSPersonalCloud
 
         public virtual async ValueTask<List<FileSystemEntry>> EnumerateChildrenAsync(string relativePath, string searchPattern, int pageSize, int pageIndex, CancellationToken cancellation = default)
         {
+            if (RootPath is null) return new List<FileSystemEntry>(0);
+
             if (string.IsNullOrWhiteSpace(relativePath)) relativePath = string.Empty;
 
             if (!string.IsNullOrEmpty(Path.GetFileName(relativePath))) relativePath += Path.AltDirectorySeparatorChar;
