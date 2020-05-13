@@ -201,7 +201,7 @@ namespace NSPersonalCloud.FileSharing
             var len = long.Parse(response.Headers.GetValues(AuthDefinitions.HttpFileLength).First(), CultureInfo.InvariantCulture);
 
             var strm = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            return new ReadStream(strm, false, len);
+            return new HashReadStream(strm, false, len);
         }
 
         /// <summary>
@@ -225,7 +225,7 @@ namespace NSPersonalCloud.FileSharing
             var len = long.Parse(response.Headers.GetValues(AuthDefinitions.HttpFileLength).First(), CultureInfo.InvariantCulture);
 
             var strm = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            return new ReadStream(strm, false, len);
+            return new HashReadStream(strm, false, len);
         }
 
         /// <summary>
@@ -241,7 +241,7 @@ namespace NSPersonalCloud.FileSharing
             }
             using var request = CreateRequest(HttpMethod.Put, "/api/share/file", ("Path", path));
             request.Headers.Add(AuthDefinitions.HttpFileLength, (fileStream.Length + 8).ToString(CultureInfo.InvariantCulture));
-            using var strm = new ReadStream(fileStream, true, 0, RequestTimeoutInMs, false);
+            using var strm = new HashReadStream(fileStream, true, 0, RequestTimeoutInMs, false);
             request.Content = new StreamContent(strm);
 
             if (cancellation == default)
@@ -265,7 +265,7 @@ namespace NSPersonalCloud.FileSharing
             }
             using var request = CreateRequest(HttpMethod.Post, "/api/share/file", ("Path", path));
             request.Headers.Add(AuthDefinitions.HttpFileLength, (fileStream.Length + 8).ToString(CultureInfo.InvariantCulture));
-            using var strm = new ReadStream(fileStream, true, 0, RequestTimeoutInMs, false);
+            using var strm = new HashReadStream(fileStream, true, 0, RequestTimeoutInMs, false);
             request.Content = new StreamContent(strm);
             request.Headers.Range = new RangeHeaderValue(position, position + length - 1 + 8);//+crc64
 

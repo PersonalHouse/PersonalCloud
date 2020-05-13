@@ -248,7 +248,7 @@ namespace NSPersonalCloud
 #pragma warning restore CA1308
 
                     using var target = HttpContext.OpenResponseStream(false, false);
-                    using var strm = new WriteStream(target, len);
+                    using var strm = new HashWriteStream(target, len);
 
                     await CopyStreamAsync(source, strm, len).ConfigureAwait(false);
                     //await source.CopyToAsync(strm).ConfigureAwait(false);
@@ -292,7 +292,7 @@ namespace NSPersonalCloud
 #pragma warning restore CA1308
 
                     using var target = HttpContext.OpenResponseStream(false, false);
-                    using var strm = new WriteStream(target, source.Length);
+                    using var strm = new HashWriteStream(target, source.Length);
 
                     await source.CopyToAsync(strm).ConfigureAwait(false);
                     strm.Dispose();
@@ -333,7 +333,7 @@ namespace NSPersonalCloud
             {
                 using var origstream = HttpContext.OpenRequestStream();
                 var len = long.Parse(HttpContext.Request.Headers[AuthDefinitions.HttpFileLength], CultureInfo.InvariantCulture);
-                using var stream = new ReadStream(origstream, false, len);
+                using var stream = new HashReadStream(origstream, false, len);
 
                 await fileSystem.WriteFileAsync(path, stream).ConfigureAwait(false);
             }
@@ -376,7 +376,7 @@ namespace NSPersonalCloud
                     using var origstream = HttpContext.OpenRequestStream();
                     var len = long.Parse(HttpContext.Request.Headers[AuthDefinitions.HttpFileLength], CultureInfo.InvariantCulture);
 
-                    using var stream = new ReadStream(origstream, false, len);
+                    using var stream = new HashReadStream(origstream, false, len);
 
                     await fileSystem.WritePartialFileAsync(path, from, to - from + 1, stream).ConfigureAwait(false);
                 }

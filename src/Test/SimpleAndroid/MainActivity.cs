@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using System.Threading.Tasks;
 using Android;
 using Android.App;
 using Android.Media;
@@ -73,63 +74,66 @@ namespace SimpleAndroid
 
         private void FabOnClick(object sender, EventArgs eventArgs)
         {
-            try
-            {
+            Task.Run(() => {
 
-                var my = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments);
-                var dic = Path.Combine(my, "TestConsoleApp", "webapps");
-                Directory.CreateDirectory(dic);
-                var loggerFactory = LoggerFactory.Create(builder => {
-                    builder
-                        .AddFilter("System", LogLevel.Warning);
-                });
-
-                var t1 = new SimpleConfigStorage(
-                    Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
-                    "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
-                var pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath), dic);
-                Directory.CreateDirectory(dic);
-                pcservice.InstallApps().Wait();
-
-                pcservice.StartService();
-                var pc = pcservice.CreatePersonalCloud("test", "test1").Result;
-
-                Thread.Sleep(3000);
-                var routdir = pc.RootFS.EnumerateChildrenAsync("/").Result;
-                //using var mem = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("This is a test sentence."));
-                File.Delete(Path.Combine(dic, "content.txt"));
-                var fso = new FileStream(Path.Combine(dic, "content.txt"), FileMode.OpenOrCreate);
-                byte[] buf = new byte[1024 * 1024];
-                for (int i = 0; i < 1; i++)
-                {
-                    fso.Write(buf);
-                }
-                fso.Dispose();
-                //File.WriteAllText(Path.Combine(dic, "content.txt"), "This is a test sentence.");
-                using var fs = new FileStream(Path.Combine(dic, "content.txt"), FileMode.Open);
                 try
                 {
-                    pc.RootFS.DeleteAsync("/test1/tex.txt").GetAwaiter().GetResult();
-                }
-                catch (System.Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-                var fi = pc.RootFS.EnumerateChildrenAsync("/test1/").Result;
 
-                pc.RootFS.WriteFileAsync("/test1/tex.txt", fs).GetAwaiter().GetResult();
+                    var my = System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments);
+                    var dic = Path.Combine(my, "TestConsoleApp", "webapps");
+                    Directory.CreateDirectory(dic);
+                    var loggerFactory = LoggerFactory.Create(builder => {
+                        builder
+                            .AddFilter("System", LogLevel.Warning);
+                    });
 
-                using var rfs = pc.RootFS.ReadFileAsync("/test1/tex.txt").Result;
-                for (int i = 0; i < 100; i++)
-                {
-                    var read = rfs.Read(buf,0, 1024 * 1024);
-                    Console.WriteLine(read);
+                    var t1 = new SimpleConfigStorage(
+                        Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
+                        "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
+                    var pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath), dic);
+                    Directory.CreateDirectory(dic);
+                    pcservice.InstallApps().Wait();
+
+                    pcservice.StartService();
+                    var pc = pcservice.CreatePersonalCloud("test", "test1").Result;
+
+                    Thread.Sleep(3000);
+                    var routdir = pc.RootFS.EnumerateChildrenAsync("/").Result;
+                    //using var mem = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("This is a test sentence."));
+                    File.Delete(Path.Combine(dic, "content.txt"));
+                    var fso = new FileStream(Path.Combine(dic, "content.txt"), FileMode.OpenOrCreate);
+                    byte[] buf = new byte[1024 * 1024];
+                    for (int i = 0; i < 1; i++)
+                    {
+                        fso.Write(buf);
+                    }
+                    fso.Dispose();
+                    //File.WriteAllText(Path.Combine(dic, "content.txt"), "This is a test sentence.");
+                    using var fs = new FileStream(Path.Combine(dic, "content.txt"), FileMode.Open);
+                    try
+                    {
+                        pc.RootFS.DeleteAsync("/test1/tex.txt").GetAwaiter().GetResult();
+                    }
+                    catch (System.Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
+                    var fi = pc.RootFS.EnumerateChildrenAsync("/test1/").Result;
+
+                    pc.RootFS.WriteFileAsync("/test1/tex.txt", fs).GetAwaiter().GetResult();
+
+                    using var rfs = pc.RootFS.ReadFileAsync("/test1/tex.txt").Result;
+                    for (int i = 0; i < 100; i++)
+                    {
+                        var read = rfs.Read(buf, 0, 1024 * 1024);
+                        Console.WriteLine(read);
+                    }
                 }
-            }
-            catch (System.Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+                catch (System.Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            });
         }
 
         public bool OnNavigationItemSelected(IMenuItem item)
