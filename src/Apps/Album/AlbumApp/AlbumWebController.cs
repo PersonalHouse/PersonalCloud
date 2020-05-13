@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
+
 using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using NSPersonalCloud.Apps.Album;
-using NSPersonalCloud.Interfaces.Apps;
+
 using SQLite;
 
 namespace NSPersonalCloud.Apps.Album
