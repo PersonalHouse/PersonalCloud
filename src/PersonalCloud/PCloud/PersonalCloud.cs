@@ -416,7 +416,7 @@ namespace NSPersonalCloud
             }
         }
 
-        public void InsertRootFS(string nodeName, AzureBlobFileSystemClient client)
+        internal void InsertRootFS(string nodeName, AzureBlobFileSystemClient client)
         {
             if (string.IsNullOrWhiteSpace(nodeName)) throw new ArgumentException("The node name is empty", nameof(nodeName));
             if (client == null) throw new ArgumentNullException(nameof(client));
