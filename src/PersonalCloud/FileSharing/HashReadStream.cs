@@ -165,9 +165,25 @@ namespace NSPersonalCloud.FileSharing
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            if (offset==0)
+            switch (origin)
             {
-                return stream.Seek(offset, origin);
+                case SeekOrigin.Begin:
+                    if (offset == 0)
+                    {
+                        crc64 = new Crc64Iso();
+                        return stream.Seek(offset, origin);
+                    }
+                    break;
+                case SeekOrigin.Current:
+                    if (offset == 0)
+                    {
+                        return stream.Seek(offset, origin);
+                    }
+                    break;
+                case SeekOrigin.End:
+                    break;
+                default:
+                    break;
             }
             Console.WriteLine($"Seek:offset {offset},origin {origin}");
             throw new NotImplementedException();
