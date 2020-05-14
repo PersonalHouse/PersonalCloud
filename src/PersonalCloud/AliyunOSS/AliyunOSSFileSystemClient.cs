@@ -163,7 +163,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             return (result?.CommonPrefixes?.Count() > 0 || result?.ObjectSummaries?.Count() > 0);
         }
 
-        private string GetRelativeName(string path)
+        private static string GetRelativeName(string path)
         {
             path = path?.Replace('\\', '/').Trim('/');
             if (!string.IsNullOrEmpty(path))

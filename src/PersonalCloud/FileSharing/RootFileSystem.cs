@@ -53,7 +53,7 @@ namespace NSPersonalCloud.RootFS
 
         #endregion IDisposable
 
-        private string[] SplitPath(string path) => path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        private static string[] SplitPath(string path) => path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
         #region IReadableFileSystem
 

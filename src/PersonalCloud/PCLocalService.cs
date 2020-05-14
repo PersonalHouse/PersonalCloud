@@ -699,9 +699,7 @@ namespace NSPersonalCloud
         {
             if (pc == null)
             {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 throw new InvalidDataException("pc couldn't be null");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
             var str = pc.GenerateShareCode();
             await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
@@ -712,9 +710,7 @@ namespace NSPersonalCloud
         {
             if (pc == null)
             {
-#pragma warning disable CA1303 // Do not pass literals as localized parameters
                 throw new InvalidDataException("pc couldn't be null");
-#pragma warning restore CA1303 // Do not pass literals as localized parameters
             }
             pc.CurrentShareCode = null;
             await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);

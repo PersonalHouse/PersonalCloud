@@ -141,7 +141,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             return default;
         }
 
-        private bool _IsDirectory(string filePath, BlobContainerClient client)
+        private static bool _IsDirectory(string filePath, BlobContainerClient client)
         {
             if (!filePath.EndsWith('/')) filePath += "/";
 
@@ -150,7 +150,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             return pages.FirstOrDefault()?.Values?.Count > 0;
         }
 
-        private string GetRelativeName(string path)
+        private static string GetRelativeName(string path)
         {
             path = path?.Replace('\\', '/').Trim('/');
             if (!string.IsNullOrEmpty(path))
