@@ -398,7 +398,7 @@ namespace NSPersonalCloud
                 //user input duplicated name
                 for (int i = 2; i < int.MaxValue; i++)
                 {
-                    key = $"{nm}({i})";
+                    key = $"{nm} ({i})";
                     if (RootFS.ClientList.ContainsKey(key))
                     {
                         continue;
@@ -428,7 +428,7 @@ namespace NSPersonalCloud
                 //user input duplicated name
                 for (int i = 2; i < int.MaxValue; i++)
                 {
-                    key = $"{nm}({i})";
+                    key = $"{nm} ({i})";
                     if (RootFS.ClientList.ContainsKey(key))
                     {
                         continue;
@@ -456,7 +456,7 @@ namespace NSPersonalCloud
                 //user input duplicated name
                 for (int i = 2; i < int.MaxValue; i++)
                 {
-                    key = $"{nm}({i})";
+                    key = $"{nm} ({i})";
                     if (RootFS.ClientList.ContainsKey(key))
                     {
                         continue;
