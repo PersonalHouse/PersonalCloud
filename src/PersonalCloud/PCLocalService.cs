@@ -605,7 +605,14 @@ namespace NSPersonalCloud
             var lis = GetAppMgrs();
             foreach (var item in lis)
             {
-                await item.InstallWebStatiFiles(ExtraWebPath).ConfigureAwait(false);
+                try
+                {
+                    await item.InstallWebStatiFiles(ExtraWebPath).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, $"Fail to InstallWebStatiFiles for {item?.GetAppId()}");
+                }
             }
         }
 

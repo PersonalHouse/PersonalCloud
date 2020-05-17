@@ -88,7 +88,7 @@ namespace NSPersonalCloud.Apps.Album
                 if (resource == null)
                     throw new FileNotFoundException($"Could not find [{filename}] in {assembly.FullName}!");
 
-                using (var file = new FileStream(outputFile, FileMode.Create, FileAccess.Write))
+                using (var file = new FileStream(outputFile, FileMode.OpenOrCreate, FileAccess.Write))
                 {
                     resource.CopyTo(file);
                 }
@@ -97,11 +97,19 @@ namespace NSPersonalCloud.Apps.Album
 
         Task IAppManager.InstallWebStatiFiles(string path)
         {
-            Directory.CreateDirectory(path);
-            var bf = Path.Combine(path, "Album.zip");
-            ExtractResource(Assembly.GetExecutingAssembly(), "NSPersonalCloud.Apps.Album.album.zip", bf);
-            ZipFile.ExtractToDirectory(bf, path,true);
-            File.Delete(bf);
+            try
+            {
+                Directory.CreateDirectory(path);
+                var bf = Path.Combine(path, "Album.zip");
+                ExtractResource(Assembly.GetExecutingAssembly(), "NSPersonalCloud.Apps.Album.album.zip", bf);
+                ZipFile.ExtractToDirectory(bf, path, true);
+                File.Delete(bf);
+            }
+            catch (Exception)
+            {
+
+                //throw;
+            }
             return Task.CompletedTask;
         }
 
