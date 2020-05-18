@@ -571,7 +571,16 @@ namespace NSPersonalCloud
             var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
             if (appmgr != null)
             {
-                var appls = appmgr.Config(jsonconfig);
+                List<AppLauncher> appls = null;
+                try
+                {
+                    appls = appmgr.Config(jsonconfig);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError(e, $"Config error for {appmgr.GetAppId()}");
+                    return Task.CompletedTask;
+                }
                 ConfigStorage.SaveApp(appid, pcid, jsonconfig);
                 foreach (var appl in appls)
                 {
@@ -625,7 +634,17 @@ namespace NSPersonalCloud
                 var s = ConfigStorage.GetApp(item.GetAppId());
                 foreach (var pcc in s)
                 {
-                    var appls = item.Config(pcc.Item2);
+
+                    List<AppLauncher> appls = null;
+                    try
+                    {
+                        appls = item.Config(pcc.Item2);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogError(e, $"Config error for {item.GetAppId()}");
+                        return;
+                    }
                     foreach (var appl in appls)
                     {
                         PersonalCloud pc = null;

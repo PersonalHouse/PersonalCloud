@@ -172,21 +172,24 @@ namespace NSPersonalCloud.Apps.Album
                 }
             }
         }
-
-        public List<AppLauncher> Config(string configjsons)
+        void CleanCache()
         {
             lock (Cache)
             {
                 Cache.Clear();
-                if (cts!=null)
+                if (cts != null)
                 {
                     cts.Cancel();
                     cts.Dispose();
-                    IndexerTask.Dispose();
                     IndexerTask = null;
                     cts = null;
                 }
             }
+        }
+
+        public List<AppLauncher> Config(string configjsons)
+        {
+            CleanCache();
             var cfgs = JsonConvert.DeserializeObject<List<AlbumConfig>>(configjsons);
             var lis = new List<AppLauncher>();
             foreach (var cfg in cfgs)

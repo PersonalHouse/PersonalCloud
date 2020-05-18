@@ -128,9 +128,6 @@ namespace LocalHosted
                                 Assert.Fail();
                             }
                         }
-                        Thread.Sleep(9999999);
-                        Thread.Sleep(9999999);
-                        Thread.Sleep(9999999);
                     }
                 }
             }
