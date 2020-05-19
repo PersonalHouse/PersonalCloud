@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="EmbedIO" Version="3.4.3" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="sqlite-net-pcl" Version="1.6.292" />
+    <PackageReference Include="sqlite-net-pcl" Version="1.7.335" />
     <PackageReference Include="System.Text.Json" Version="4.7.2" />
   </ItemGroup>
 

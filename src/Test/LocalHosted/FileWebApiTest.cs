@@ -302,5 +302,18 @@ namespace LocalHosted
             }
             Task.WaitAll(clients.ToArray());
         }
+
+        [Test, Order(12)]
+        public async Task CreateFileZeroLength()
+        {
+            using var fileStream = new MemoryStream();
+            await Client.WriteFileAsync("test.txt", fileStream).ConfigureAwait(false);
+
+            var rs = await Client.ReadFileAsync("test.txt").ConfigureAwait(false);
+            Assert.AreEqual(rs.Length, 0);
+            var buf = new byte[1024];
+            var ret = rs.Read(new Span<byte>(buf));
+            Assert.AreEqual(ret, 0);
+        }
     }
 }

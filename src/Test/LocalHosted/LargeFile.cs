@@ -157,7 +157,7 @@ namespace LocalHosted
 
         }
 
-        private async Task TestRead(string filename, long filesize, int parts, TopFolderClient client)
+        static private async Task TestRead(string filename, long filesize, int parts, TopFolderClient client)
         {
             var reflen = 1024 * 1024;
             var bufref = new byte[reflen];

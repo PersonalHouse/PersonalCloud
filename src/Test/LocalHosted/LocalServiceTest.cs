@@ -30,7 +30,7 @@ namespace LocalHosted
                     srv.StartService();
                     var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
                     Thread.Sleep(1000);
-                    var lis = pc.RootFS.EnumerateChildrenAsync("/").Result;
+                    var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                     Assert.AreEqual( 1, lis.Count);
                 }
             }
@@ -224,13 +224,13 @@ namespace LocalHosted
             }
         }
 
-        private void SimapleShareCheckContent(PersonalCloud pc, int expectedCount, int nodes)
+        static private void SimapleShareCheckContent(PersonalCloud pc, int expectedCount, int nodes)
         {
-            var fs2 = pc.RootFS.EnumerateChildrenAsync("/").Result;
+            var fs2 = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
             Assert.AreEqual(nodes, fs2.Count);
             foreach (var item in fs2)
             {
-                var f = pc.RootFS.EnumerateChildrenAsync($"/{item.Name}").Result;
+                var f = pc.RootFS.EnumerateChildrenAsync($"/{item.Name}").AsTask().Result;
                 Assert.AreEqual(expectedCount, f.Count);
             }
         }
@@ -250,7 +250,7 @@ namespace LocalHosted
                     Thread.Sleep(1000);
                     for (int i = 0; i < 100; i++)
                     {
-                        var lis = pc.RootFS.EnumerateChildrenAsync("/").Result;
+                        var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
                         srv.StopNetwork();
                         Thread.Sleep(100);
@@ -278,14 +278,14 @@ namespace LocalHosted
                     Thread.Sleep(1000);
                     for (int i = 0; i < 10; i++)
                     {
-                        var lis = pc.RootFS.EnumerateChildrenAsync("/").Result;
+                        var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
                         srv.StartNetwork(false);
                         Thread.Sleep(200);
                     }
                     for (int i = 0; i < 10; i++)
                     {
-                        var lis = pc.RootFS.EnumerateChildrenAsync("/").Result;
+                        var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
                         srv.TestStopWebServer();
                         srv.StartNetwork(false);
@@ -394,7 +394,7 @@ namespace LocalHosted
                         srv2.StopNetwork();
                         srv2.Dispose();
                         Thread.Sleep(10000);
-                        _= pc1.RootFS.EnumerateChildrenAsync("/").Result;
+                        _= pc1.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Thread.Sleep(1000);
                         SimapleShareCheckContent(pc1, 2, 1);
                     }

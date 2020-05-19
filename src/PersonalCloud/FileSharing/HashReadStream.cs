@@ -17,7 +17,7 @@ namespace NSPersonalCloud.FileSharing
         bool CloseStream;
         int TimeOut;
         public CancellationTokenSource TokenSource;
-        public HashReadStream(Stream strm, bool Appendhash, long filelen = 0, int cancellreadafterms = 0, bool closestrm = true)
+        public HashReadStream(Stream strm, bool Appendhash, long filelen, int cancellreadafterms = 0, bool closestrm = true)
         {
             CloseStream = closestrm;
             FileLength = filelen > 0 ? filelen : strm.Length;
