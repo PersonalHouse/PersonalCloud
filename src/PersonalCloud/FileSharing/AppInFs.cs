@@ -13,7 +13,7 @@ namespace NSPersonalCloud.FileSharing
 {
     public class AppInFs : IFileSystem
     {
-        public Func<List<AppLauncher>> GetApps;
+        public Func<List<AppLauncher>> GetApps { get; set; }
         public Func<AppLauncher, string> GetUrl { get; set; }
 
 
@@ -43,7 +43,7 @@ namespace NSPersonalCloud.FileSharing
             {
                 throw new NotSupportedException("Enum directory is not supported.");
             }
-            var apps = _GetApps();
+            var apps = GetApps();
             return new ValueTask<List<FileSystemEntry>>(
                 apps.Select(x => new FileSystemEntry() {
                     Name=$"{x.Name}.htm",
@@ -61,7 +61,7 @@ namespace NSPersonalCloud.FileSharing
             {
                 throw new NotSupportedException("Enum directory is not supported.");
             }
-            var apps = _GetApps();
+            var apps = GetApps();
             return new ValueTask<List<FileSystemEntry>>(
                 apps.Select(x => new FileSystemEntry() {
                     Name = $"{x.Name}.htm",
@@ -105,7 +105,7 @@ namespace NSPersonalCloud.FileSharing
                 throw new NotSupportedException($"ReadMetadataAsync on path {path} is not supported.");
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
-            var apps = _GetApps();
+            var apps = GetApps();
             var al = apps.FirstOrDefault(x => string.Compare(x.Name, appname, true, CultureInfo.InvariantCulture) == 0);
             if (al==null)
             {
@@ -134,7 +134,7 @@ namespace NSPersonalCloud.FileSharing
                 throw new NotSupportedException($"ReadMetadataAsync on path {path} is not supported.");
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
-            var apps = _GetApps();
+            var apps = GetApps();
             var al = apps.FirstOrDefault(x => string.Compare(x.Name, appname, true, CultureInfo.InvariantCulture) == 0);
             if (al == null)
             {
@@ -156,7 +156,7 @@ namespace NSPersonalCloud.FileSharing
                 throw new NotSupportedException($"ReadMetadataAsync on path {path} is not supported.");
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
-            var apps = _GetApps();
+            var apps = GetApps();
             var al = apps.FirstOrDefault(x => string.Compare(x.Name, appname, true, CultureInfo.InvariantCulture) == 0);
             if (al == null)
             {
