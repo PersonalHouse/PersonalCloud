@@ -1,0 +1,61 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build_windows:
+    name: Windows
+
+    runs-on: windows-latest
+
+    env:
+      SolutionPath: 'PersonalCloud.sln'
+      Configuration: 'Release'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          submodules: 'recursive'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1.0.0
+
+      - name: Restore
+        run: |
+          cd src
+          msbuild $env:SolutionPath /t:Restore /p:Configuration=$env:Configuration
+
+      - name: Build
+        run: |
+          cd src
+          msbuild $env:SolutionPath /v:d /t:Rebuild /p:Configuration=$env:Configuration
+
+  build_macos:
+    name: macOS
+
+    runs-on: macos-latest
+
+    env:
+      SolutionPath: 'PersonalCloud.sln'
+      Configuration: 'Release'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+        with:
+          submodules: 'recursive'
+
+      - name: Restore
+        run: |
+          cd src
+          msbuild ${{ env.SolutionPath }} /t:Restore /p:Configuration=${{ env.Configuration }}
+
+      - name: Build
+        run: |
+          cd src
+          msbuild ${{ env.SolutionPath }} /v:d /t:Rebuild /p:Configuration=${{ env.Configuration }}
