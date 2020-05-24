@@ -78,7 +78,9 @@ namespace NSPersonalCloud.FileSharing
                 lock (_SubFss)
                 {
                     return new ValueTask<List<FileSystemEntry>>(_SubFss.Select(x => new FileSystemEntry {
-                        Name = x.Key
+                        Name = x.Key,
+                        Attributes = FileAttributes.Normal | FileAttributes.Directory,
+                        Size = 0,
                     }).ToList());
                 }
             }
@@ -101,8 +103,10 @@ namespace NSPersonalCloud.FileSharing
                         .Skip(pageSize* pageIndex)
                         .Take(pageSize)
                         .Select(x => new FileSystemEntry {
-                        Name = x.Key
-                    }).ToList());
+                        Name = x.Key,
+                            Attributes = FileAttributes.Normal | FileAttributes.Directory,
+                            Size = 0,
+                        }).ToList());
                 }
             }
             else

@@ -21,30 +21,9 @@ using static System.Environment;
 
 namespace LocalHosted
 {
-    internal sealed class HttpProvider : IDisposable
-    {
-        private WebServer Server { get; }
-        private IFileSystem FileSystem { get; }
 
-        public HttpProvider(int port, IFileSystem fileSystem)
-        {
-            FileSystem = fileSystem;
-#pragma warning disable CA2000 // Dispose objects before losing scope
-            Server = new WebServer(port).WithLocalSessionManager().WithWebApi("Share", "/api/share", module => module.WithController(CreateController));
-#pragma warning restore CA2000 // Dispose objects before losing scope
-        }
 
-        public void Start() => Server?.Start();
-
-        private ShareController CreateController() => new ShareController(FileSystem,null);
-
-        public void Dispose()
-        {
-            Server?.Dispose();
-        }
-    }
-
-    public class FileWebApiTest
+    public class FileContainerWebApiTest
     {
         private const string TestFileContent = "一行测试文字。\nこれはＴＥＳＴです。\nThis is a test.";
 
@@ -72,7 +51,11 @@ namespace LocalHosted
 
             Directory.CreateDirectory(TestRoot);
 
-            Server = new HttpProvider(10240, new VirtualFileSystem(TestRoot));
+            var dic = new Dictionary<string, IFileSystem>();
+            dic["Files"] = new VirtualFileSystem(TestRoot);
+            var RootFs = new FileSystemContainer(dic);
+
+            Server = new HttpProvider(10240, RootFs);
             Server.Start();
 
             Client = new TopFolderClient($"http://localhost:10240", new byte[32], "");
@@ -134,7 +117,7 @@ namespace LocalHosted
         {
             var source = Encoding.UTF8.GetBytes(TestFileContent);
             using var fileStream = new MemoryStream(source);
-            await Client.WriteFileAsync("test.txt", fileStream).ConfigureAwait(false);
+            await Client.WriteFileAsync("Files/test.txt", fileStream).ConfigureAwait(false);
 
             using var empty = new MemoryStream(0);
             // Attempt to overwrite existing file.
@@ -142,43 +125,43 @@ namespace LocalHosted
             // Attempt to create file with illegal name.
             Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync(@"test\", fileStream).AsTask());
             // Attempt to create folder of the same name.
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("test.txt").AsTask());
+            Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("Files/test.txt").AsTask());
         }
 
         [Test, Order(2)]
         public async Task CreateFolder()
         {
-            await Client.CreateDirectoryAsync("Sample").ConfigureAwait(false);
-            await Client.CreateDirectoryAsync(@"Sample\X\").ConfigureAwait(false);
+            await Client.CreateDirectoryAsync("Files/Sample").ConfigureAwait(false);
+            await Client.CreateDirectoryAsync(@"Files/Sample\X\").ConfigureAwait(false);
 
             // Attempt to overwrite existing folder.
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("Sample").AsTask());
+            Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("Files/Sample").AsTask());
             using var empty = new MemoryStream(0);
             // Attempt to create file of the same name.
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync("Sample", empty).AsTask());
+            Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync("Files/Sample", empty).AsTask());
         }
 
         [Test, Order(3)]
         public async Task Enumerate()
         {
-            var items = await Client.EnumerateChildrenAsync(Path.AltDirectorySeparatorChar.ToString(CultureInfo.InvariantCulture)).ConfigureAwait(false);
+            var items = await Client.EnumerateChildrenAsync("Files/").ConfigureAwait(false);
             Assert.IsNotNull(items);
             Assert.AreEqual(2, items.Count);
 
             items = await Client.EnumerateChildrenAsync(string.Empty).ConfigureAwait(false);
             Assert.IsNotNull(items);
-            Assert.AreEqual(2, items.Count);
+            Assert.AreEqual(1, items.Count);
 
-            items = await Client.EnumerateChildrenAsync(@"Sample\X\..").ConfigureAwait(false);
+            items = await Client.EnumerateChildrenAsync(@"Files/Sample\X\..").ConfigureAwait(false);
             Assert.IsNotNull(items);
             Assert.AreEqual(1, items.Count);
 
             // Relative path is supported as long as the absolute path falls within shared container.
-            items = await Client.EnumerateChildrenAsync(@"Sample\X\..\..\..\Test Container").ConfigureAwait(false);
+            items = await Client.EnumerateChildrenAsync(@"Files/Sample\X\..\..\..\Test Container").ConfigureAwait(false);
             Assert.IsNotNull(items);
             Assert.AreEqual(2, items.Count);
 
-            items = await Client.EnumerateChildrenAsync(@"Sample\X\").ConfigureAwait(false);
+            items = await Client.EnumerateChildrenAsync(@"Files/Sample\X\").ConfigureAwait(false);
             Assert.IsNotNull(items);
             Assert.IsEmpty(items);
 
@@ -192,7 +175,7 @@ namespace LocalHosted
             var source = Encoding.UTF8.GetBytes(TestFileContent);
             var target = new byte[source.Length];
 
-            using var networkStream = await Client.ReadFileAsync("test.txt").ConfigureAwait(false);
+            using var networkStream = await Client.ReadFileAsync("Files/test.txt").ConfigureAwait(false);
             var bytesRead = await networkStream.ReadAsync(target).ConfigureAwait(false);
             Assert.AreEqual(target.Length, bytesRead);
             Assert.AreEqual(source, target);
@@ -211,13 +194,13 @@ namespace LocalHosted
             var partial2 = new byte[20];
             Buffer.BlockCopy(source, 30, partial2, 0, partial2.Length);
 
-            using var partialStream1 = await Client.ReadPartialFileAsync("test.txt", 3, 13).ConfigureAwait(false);
+            using var partialStream1 = await Client.ReadPartialFileAsync("Files/test.txt", 3, 13).ConfigureAwait(false);
             var target = new byte[partial1.Length];
             var bytesRead = await partialStream1.ReadAsync(target).ConfigureAwait(false);
             Assert.AreEqual(target.Length, bytesRead);
             Assert.AreEqual(partial1, target);
 
-            using var partialStream2 = await Client.ReadPartialFileAsync("test.txt", 30, 50).ConfigureAwait(false);
+            using var partialStream2 = await Client.ReadPartialFileAsync("Files/test.txt", 30, 50).ConfigureAwait(false);
             target = new byte[partial2.Length];
             bytesRead = await partialStream2.ReadAsync(target).ConfigureAwait(false);
             Assert.AreEqual(target.Length, bytesRead);
@@ -227,48 +210,33 @@ namespace LocalHosted
         [Test, Order(6)]
         public async Task Rename()
         {
-            await Client.RenameAsync("test.txt", "Test.md").ConfigureAwait(false);
-            await Client.RenameAsync("Sample/", "Some Folder").ConfigureAwait(false);
+            await Client.RenameAsync("Files/test.txt", "Files/Test.md").ConfigureAwait(false);
+            await Client.RenameAsync("Files/Sample/", "Files/Some Folder").ConfigureAwait(false);
         }
 
         [Test, Order(7)]
         public async Task Delete()
         {
-            await Client.DeleteAsync("Test.md").ConfigureAwait(false);
-            await Client.DeleteAsync("Some Folder/").ConfigureAwait(false);
+            await Client.DeleteAsync("Files/Test.md").ConfigureAwait(false);
+            await Client.DeleteAsync("Files/Some Folder/").ConfigureAwait(false);
 
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.DeleteAsync("Unknown.md").AsTask());
-            await Client.DeleteAsync("Unknown.md", true).ConfigureAwait(false);
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.DeleteAsync("Some Unknown Folder/", true).AsTask());
+            Assert.ThrowsAsync<HttpRequestException>(() => Client.DeleteAsync("Files/Unknown.md").AsTask());
+            await Client.DeleteAsync("Files/Unknown.md", true).ConfigureAwait(false);
+            Assert.ThrowsAsync<HttpRequestException>(() => Client.DeleteAsync("Files/Some Unknown Folder/", true).AsTask());
         }
+
 
         [Test, Order(8)]
-        public async Task ObserveChanges()
-        {
-            Directory.CreateDirectory(Path.Combine(TestRoot, DateTime.Now.ToString("yyyyMMdd HHmmss", CultureInfo.InvariantCulture)));
-
-            var items = await Client.EnumerateChildrenAsync(string.Empty).ConfigureAwait(false);
-            Assert.IsNotNull(items);
-            Assert.AreEqual(items.Count, 1);
-
-            File.CreateText(Path.Combine(TestRoot, DateTime.Now.ToString("yyyyMMdd HHmmss", CultureInfo.InvariantCulture) + ".txt")).Dispose();
-
-            items = await Client.EnumerateChildrenAsync(string.Empty).ConfigureAwait(false);
-            Assert.IsNotNull(items);
-            Assert.AreEqual(items.Count, 2);
-        }
-
-        [Test, Order(9)]
         public async Task PathTooLong()
         {
-            await Client.CreateDirectoryAsync(Path.Combine("Wolahlegelsteinhausenbergerdorff",
+            await Client.CreateDirectoryAsync(Path.Combine("Files", "Wolahlegelsteinhausenbergerdorff",
                 "黃宏成台灣阿成世界偉人財神總統",
                 "Muvaffakiyetsizleştiricileştiriveremeyeileceklerimizdenmişsinizcesine",
                 "กรุงเทพมหานคร อมรรัตนโกสินทร์ มหินทรายุทธยา นพรัตนราชธานีบุรีรมย์ อุดมราชนิเวศน์มหาสถาน อมรพิมานอวตารสถิต สักกะทัตติยะวิษณุกรรมประสิทธิ์"))
                 .ConfigureAwait(false);
 
             using var empty = new MemoryStream(0);
-            await Client.WriteFileAsync(Path.Combine("Wolfeschlegelsteinhausenbergerdorff", "Wolfeschlegelsteinhausenbergerdorff",
+            await Client.WriteFileAsync(Path.Combine("Files", "Wolfeschlegelsteinhausenbergerdorff", "Wolfeschlegelsteinhausenbergerdorff",
                 "黃宏成台灣阿成世界偉人財神總統", "黃宏成台灣阿成世界偉人財神總統",
                 "Muvaffakiyetsizleştiricileştiriveremeyebileceklerimizdenmişsinizcesine",
                 "Muvaffakiyetsizleştiricileştiriveremeyebileceklerimizdenmişsinizcesine",
@@ -283,14 +251,8 @@ namespace LocalHosted
                 "Wow.dat"), empty).ConfigureAwait(false);
         }
 
-        [Test, Order(10)]
-        public void AccessViolation()
-        {
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.EnumerateChildrenAsync("../").AsTask());
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("../../I Am Groot").AsTask());
-        }
 
-        [Test, Order(11)]
+        [Test, Order(9)]
         public void ConcurrentAccess()
         {
             // Todo: Can HttpClient send multiple requests at once? Multiple client needed?
@@ -298,22 +260,10 @@ namespace LocalHosted
 
             foreach (var i in Enumerable.Range(1, 100))
             {
-                clients.Add(Client.CreateDirectoryAsync($"Folder {i}").AsTask());
+                clients.Add(Client.CreateDirectoryAsync($"Files/Folder {i}").AsTask());
             }
             Task.WaitAll(clients.ToArray());
         }
 
-        [Test, Order(12)]
-        public async Task CreateFileZeroLength()
-        {
-            using var fileStream = new MemoryStream();
-            await Client.WriteFileAsync("test.txt", fileStream).ConfigureAwait(false);
-
-            var rs = await Client.ReadFileAsync("test.txt").ConfigureAwait(false);
-            Assert.AreEqual(rs.Length, 0);
-            var buf = new byte[1024];
-            var ret = rs.Read(new Span<byte>(buf));
-            Assert.AreEqual(ret, 0);
-        }
     }
 }
