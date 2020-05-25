@@ -73,7 +73,7 @@ namespace LocalHosted
 
 
         [Test]
-        public void SimpleApp()
+        public async Task SimpleApp()
         {
 
             var my = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -104,13 +104,14 @@ namespace LocalHosted
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
                         var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
 
-                        srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
+
+                        await srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
                             new AlbumConfig {
                                 MediaFolder= @"F:\pics",
                                 Name="test",
                                 ThumbnailFolder=@"D:\Projects\out"
                             }
-                        });
+                        }).ConfigureAwait(false);
 
                         Assert.AreEqual(pc1.Apps?.Count, 1);
 
@@ -128,6 +129,74 @@ namespace LocalHosted
                                 Assert.Fail();
                             }
                         }
+                    }
+                }
+            }
+        }
+
+
+        [Test]
+        public async Task SimpleAppinFS()
+        {
+
+            var my = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var dic = Path.Combine(my, "TestConsoleApp", "webapps");
+
+            var t1 = new SimpleConfigStorage(
+                Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
+            Directory.CreateDirectory(dic);
+
+
+            using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
+            {
+                var l = loggerFactory.CreateLogger<LocalServiceTest>();
+                var t = DateTime.Now;
+
+                var inf1 = new HostPlatformInfo();
+                using (var srv1 = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath), dic))
+                {
+                    srv1.InstallApps().Wait();
+
+                    var inf2 = new HostPlatformInfo();
+                    using (var srv2 = new PCLocalService(inf2, loggerFactory, new VirtualFileSystem(inf2.GetConfigFolder()), null))
+                    {
+                        srv1.StartService();
+                        srv2.StartService();
+
+                        //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
+                        var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+
+                        await srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
+                            new AlbumConfig {
+                                MediaFolder= @"F:\pics",
+                                Name="test",
+                                ThumbnailFolder=@"D:\Projects\out"
+                            }
+                        }).ConfigureAwait(false);
+
+                        Assert.AreEqual(pc1.Apps?.Count, 1);
+
+                        var ret = srv1.SharePersonalCloud(pc1).Result;
+                        Thread.Sleep(3000);
+                        var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
+                        Thread.Sleep(1000);
+
+                        Assert.AreEqual(pc2.Apps?.Count, 1);
+                        foreach (var item in pc2.Apps)
+                        {
+                            var url = pc2.GetWebAppUri(item);
+                            if (string.IsNullOrWhiteSpace(url?.AbsoluteUri))
+                            {
+                                Assert.Fail();
+                            }
+                        }
+
+                        var appinfs = new NSPersonalCloud.FileSharing.AppInFs();
+                        appinfs.GetApps = () => pc1.Apps;
+                        appinfs.GetUrl = (x) => pc1.GetWebAppUri(x).ToString();
+                        var ls = await appinfs.EnumerateChildrenAsync("/").ConfigureAwait(false);
+                        Assert.AreEqual(ls.Count, 1);
                     }
                 }
             }

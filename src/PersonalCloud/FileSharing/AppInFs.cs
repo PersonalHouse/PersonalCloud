@@ -102,7 +102,11 @@ namespace NSPersonalCloud.FileSharing
             var ps = GetFolderSegments(path);
             if (ps?.Length != 1)
             {
-                throw new NotSupportedException($"ReadMetadataAsync on path {path} is not supported.");
+                return new ValueTask<FileSystemEntry>(new FileSystemEntry {
+                    CreationDate = DateTime.Now,
+                    ModificationDate = DateTime.Now,
+                    Attributes = FileAttributes.Directory,
+                });
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
             var apps = GetApps();
