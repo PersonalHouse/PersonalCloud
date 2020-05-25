@@ -17,12 +17,18 @@ namespace NSPersonalCloud.FileSharing
         {
             _SubFss = subfss;
         }
-        static string GetRootFolder(string path, out string subpath)
+        public static string GetRootFolder(string path, out string subpath)
         {
             string[] items = path.Split(new char[] {'/', '\\'}, StringSplitOptions.RemoveEmptyEntries);
             if (items?.Length>0)
             {
-                subpath = string.Join('/', items, 1, items.Length - 1);
+                if (items.Length>1)
+                {
+                    subpath = string.Join('/', items, 1, items.Length - 1);
+                }else
+                {
+                    subpath = "/";
+                }
                 return items[0];
             }
             subpath = null;
@@ -40,7 +46,7 @@ namespace NSPersonalCloud.FileSharing
                         return _SubFss[cpath];
                     }
                 }
-                throw new UnauthorizedAccessException($"Unknow folder: {path}.");
+                throw new FileNotFoundException($"Unknow folder: {path}.");
             }
             return null;
         }
@@ -74,11 +80,12 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-
                 lock (_SubFss)
                 {
                     return new ValueTask<List<FileSystemEntry>>(_SubFss.Select(x => new FileSystemEntry {
-                        Name = x.Key
+                        Name = x.Key,
+                        Attributes = FileAttributes.Normal | FileAttributes.Directory,
+                        Size = 0,
                     }).ToList());
                 }
             }
@@ -93,7 +100,6 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-
                 lock (_SubFss)
                 {
                     return new ValueTask<List<FileSystemEntry>>(
@@ -101,8 +107,10 @@ namespace NSPersonalCloud.FileSharing
                         .Skip(pageSize* pageIndex)
                         .Take(pageSize)
                         .Select(x => new FileSystemEntry {
-                        Name = x.Key
-                    }).ToList());
+                        Name = x.Key,
+                            Attributes = FileAttributes.Normal | FileAttributes.Directory,
+                            Size = 0,
+                        }).ToList());
                 }
             }
             else
@@ -131,20 +139,29 @@ namespace NSPersonalCloud.FileSharing
 
         public virtual ValueTask<FileSystemEntry> ReadMetadataAsync(string path, CancellationToken cancellation)
         {
-            var fs = GetSubFs(path, out var subpath);
-            if (fs == null)
+
+            try
             {
-                lock (_SubFss)
+                var fs = GetSubFs(path, out var subpath);
+                if (fs == null)
                 {
-                    return new ValueTask<FileSystemEntry>(new FileSystemEntry {
-                        ChildCount = _SubFss.Count,
-                        Attributes=FileAttributes.Directory,
-                    });
+                    lock (_SubFss)
+                    {
+                        return new ValueTask<FileSystemEntry>(new FileSystemEntry {
+                            ChildCount = _SubFss.Count,
+                            Attributes = FileAttributes.Directory,
+                        });
+                    }
+                }
+                else
+                {
+                    return fs.ReadMetadataAsync(subpath, cancellation);
                 }
             }
-            else
+            catch (Exception e)
             {
-                return fs.ReadMetadataAsync(subpath, cancellation);
+                Console.WriteLine($"ReadMetadataAsync {path} {e.Message}");
+                throw;
             }
         }
 
@@ -223,7 +240,13 @@ namespace NSPersonalCloud.FileSharing
             }
             else
             {
-                return fs.WriteFileAsync(subpath, data, cancellation);
+                if (!string.IsNullOrWhiteSpace(subpath))
+                {
+                    return fs.WriteFileAsync(subpath, data, cancellation);
+                }else
+                {
+                    throw new InvalidOperationException("The path does not point to a file, or the file already exists.");
+                }
             }
         }
 
@@ -236,7 +259,14 @@ namespace NSPersonalCloud.FileSharing
             }
             else
             {
-                return fs.WritePartialFileAsync(subpath, offset, dataLength, data, cancellation);
+                if (!string.IsNullOrWhiteSpace(subpath))
+                {
+                    return fs.WriteFileAsync(subpath, data, cancellation);
+                }
+                else
+                {
+                    throw new InvalidOperationException("The path does not point to a file, or the file already exists.");
+                }
             }
         }
     }

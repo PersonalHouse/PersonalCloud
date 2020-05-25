@@ -133,11 +133,11 @@ namespace NSPersonalCloud.Apps.Album
                         foreach (var item in lis)
                         {
                             tk.ThrowIfCancellationRequested();
-                            await IndexOneAlbum(exepath, item.MediaFolder, item.ThumbnailFolder, tk);
+                            await IndexOneAlbum(exepath, item.MediaFolder, item.ThumbnailFolder, tk).ConfigureAwait(false);
                         }
                     }
                     tk.ThrowIfCancellationRequested();
-                    await Task.Delay(60 * 60 * 1000, tk);//1 hour
+                    await Task.Delay(60 * 60 * 1000, tk).ConfigureAwait(false);//1 hour
                 }
             }
             catch (Exception)
@@ -159,7 +159,7 @@ namespace NSPersonalCloud.Apps.Album
                 {
                     proc.Kill();
                 }
-                await Task.Delay(30 * 1000, tk);
+                await Task.Delay(30 * 1000, tk).ConfigureAwait(false);
                 
                 if (tk.IsCancellationRequested)
                 {
