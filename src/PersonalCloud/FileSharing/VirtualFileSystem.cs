@@ -212,9 +212,13 @@ namespace NSPersonalCloud
                 throw new UnauthorizedAccessException("Cannot access a folder that is not shared.");
             }
 
-            if (isDirectory || info.Exists)
+            if (isDirectory )
             {
-                throw new InvalidOperationException("The path does not point to a file, or the file already exists.");
+                throw new InvalidOperationException("The path does not point to a file.");
+            }
+            if (info.Exists)
+            {
+                throw new InvalidOperationException("The file already exists.");
             }
 
             var fileInfo = (FileInfo) info;

@@ -185,7 +185,6 @@ namespace NSPersonalCloud.FileSharing
                 default:
                     break;
             }
-            Console.WriteLine($"Seek:offset {offset},origin {origin}");
             throw new NotImplementedException();
         }
 

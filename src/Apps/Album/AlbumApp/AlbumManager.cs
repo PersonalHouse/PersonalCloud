@@ -148,8 +148,8 @@ namespace NSPersonalCloud.Apps.Album
         }
         async Task IndexOneAlbum(string exepath, string src,string des,  CancellationToken tk)
         {
-            var si = new ProcessStartInfo(exepath,$" -O {des} -I {src} ");
-            var proc = new Process();
+            var si = new ProcessStartInfo(exepath,$" -O \"{des}\" -I \"{src}\" ");
+            using var proc = new Process();
             proc.StartInfo = si;
             proc.Start();
             int i = 0;

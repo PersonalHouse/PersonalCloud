@@ -142,6 +142,10 @@ namespace NSPersonalCloud
             {
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
+            catch (FileNotFoundException)
+            {
+                await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
+            }
             catch (NotReadyException)
             {
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
@@ -149,6 +153,7 @@ namespace NSPersonalCloud
             catch (Exception e)
             {
                 _ = e.Message;
+                Console.WriteLine($"exception in ReadMetadata {e.Message} {e.StackTrace}");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -337,8 +342,9 @@ namespace NSPersonalCloud
 
                 await fileSystem.WriteFileAsync(path, stream).ConfigureAwait(false);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                Console.WriteLine($"CreateFile {e.Message} {e.StackTrace}");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
             catch (UnauthorizedAccessException)
@@ -395,6 +401,7 @@ namespace NSPersonalCloud
                 catch (Exception e)
                 {
                     _ = e.Message;
+                    Console.WriteLine(e.Message);
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 }
             }

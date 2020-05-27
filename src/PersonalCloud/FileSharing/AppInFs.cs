@@ -19,6 +19,10 @@ namespace NSPersonalCloud.FileSharing
 
         static string[] GetFolderSegments(string path)
         {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return Array.Empty<string>();
+            }
             return  path.Split(new char[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
@@ -34,28 +38,27 @@ namespace NSPersonalCloud.FileSharing
 
         public ValueTask<List<FileSystemEntry>> EnumerateChildrenAsync(string path, CancellationToken cancellation = default)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new NotSupportedException("Enum directory is not supported.");
-            }
             var ps = GetFolderSegments(path);
             if (ps?.Length>0)
             {
                 throw new NotSupportedException("Enum directory is not supported.");
             }
             var apps = GetApps();
+
+
             return new ValueTask<List<FileSystemEntry>>(
-                apps.Select(x => new FileSystemEntry() {
-                    Name=$"{x.Name}.htm",
+                apps.Select(x => {
+                    using var s = GetContent(x);
+                    return new FileSystemEntry() { Name = $"{x.Name}.html",
+                        Size = s.Length,
+                        ModificationDate = DateTime.Now,
+                        Attributes=FileAttributes.Normal,
+                    };
                 }).ToList());
         }
 
         public ValueTask<List<FileSystemEntry>> EnumerateChildrenAsync(string path, string searchPattern, int pageSize, int pageIndex, CancellationToken cancellation = default)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new NotSupportedException("Enum directory is not supported.");
-            }
             var ps = GetFolderSegments(path);
             if (ps?.Length > 0)
             {
@@ -63,8 +66,14 @@ namespace NSPersonalCloud.FileSharing
             }
             var apps = GetApps();
             return new ValueTask<List<FileSystemEntry>>(
-                apps.Select(x => new FileSystemEntry() {
-                    Name = $"{x.Name}.htm",
+                apps.Select(x => {
+                    using var s = GetContent(x);
+                    return new FileSystemEntry() {
+                        Name = $"{x.Name}.html",
+                        Size = s.Length,
+                        ModificationDate = DateTime.Now,
+                        Attributes = FileAttributes.Normal,
+                    };
                 }).Skip(pageSize* pageIndex).Take(pageSize).ToList());
         }
 
@@ -95,18 +104,18 @@ namespace NSPersonalCloud.FileSharing
 
         public ValueTask<FileSystemEntry> ReadMetadataAsync(string path, CancellationToken cancellation = default)
         {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                throw new NotSupportedException($"ReadMetadataAsync on path {path} is not supported.");
-            }
             var ps = GetFolderSegments(path);
-            if (ps?.Length != 1)
+            if (ps?.Length ==0)
             {
                 return new ValueTask<FileSystemEntry>(new FileSystemEntry {
                     CreationDate = DateTime.Now,
                     ModificationDate = DateTime.Now,
                     Attributes = FileAttributes.Directory,
                 });
+            }
+            if (ps?.Length !=1 )
+            {
+                throw new NotSupportedException($"ReadMetadataAsync is not supported on {path}.");
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
             var apps = GetApps();
@@ -115,10 +124,10 @@ namespace NSPersonalCloud.FileSharing
             {
                 throw new NotSupportedException($"ReadMetadataAsync couldn't find path {path}.");
             }
-            var ac = GetContent(al);
+            using var ac = GetContent(al);
 
             return new ValueTask<FileSystemEntry>(new FileSystemEntry {
-                Name = $"{al.Name}.htm",
+                Name = $"{al.Name}.html",
                 CreationDate = DateTime.Now,
                 ModificationDate = DateTime.Now,
                 Size = ac.Length

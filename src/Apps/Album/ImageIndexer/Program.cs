@@ -30,15 +30,16 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             }
             if (string.IsNullOrWhiteSpace(indexpath) || string.IsNullOrWhiteSpace(inputfolder))
             {
+                Console.WriteLine($"Input indexpath is {indexpath}, inputfolder is {inputfolder}");
                 Console.WriteLine("Input empty path");
                 OutputUsage();
                 return;
             }
             var ts = DateTime.UtcNow.ToFileTime();
             using var idx = new ImgIndexer(indexpath);
-            await idx.Scan(inputfolder, ts);
+            await idx.Scan(inputfolder, ts).ConfigureAwait(false);
             idx.CleanNotExistImages(ts);
-            await idx.SaveYearMonthDays();
+            await idx.SaveYearMonthDays().ConfigureAwait(false);
         }
 
         private static void OutputUsage()
