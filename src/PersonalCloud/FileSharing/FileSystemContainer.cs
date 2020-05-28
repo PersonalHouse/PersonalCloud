@@ -335,7 +335,7 @@ namespace NSPersonalCloud.FileSharing
                     if (!string.IsNullOrWhiteSpace(subpath))
                     {
                         logger.LogTrace($"WritePartialFileAsync to sub {subpath}");
-                        return fs.WriteFileAsync(subpath, data, cancellation);
+                        return fs.WritePartialFileAsync(subpath, offset, dataLength, data, cancellation);
                     }
                     else
                     {

@@ -218,7 +218,7 @@ namespace NSPersonalCloud
             }
             if (info.Exists)
             {
-                throw new InvalidOperationException("The file already exists.");
+                //throw new InvalidOperationException("The file already exists.");
             }
 
             var fileInfo = (FileInfo) info;
