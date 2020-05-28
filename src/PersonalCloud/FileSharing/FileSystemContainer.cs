@@ -315,7 +315,7 @@ namespace NSPersonalCloud.FileSharing
             }
             catch (Exception ex)
             {
-                logger.LogTrace($"WriteFileAsync ex {ex.Message}");
+                logger.LogError($"WriteFileAsync ex {ex.Message}");
                 throw;
             }
         }
@@ -334,7 +334,7 @@ namespace NSPersonalCloud.FileSharing
                 {
                     if (!string.IsNullOrWhiteSpace(subpath))
                     {
-                        logger.LogTrace($"WritePartialFileAsync to sub {subpath}");
+                        //logger.LogTrace($"WritePartialFileAsync to sub {subpath}");
                         return fs.WritePartialFileAsync(subpath, offset, dataLength, data, cancellation);
                     }
                     else
@@ -345,7 +345,7 @@ namespace NSPersonalCloud.FileSharing
             }
             catch (Exception ex)
             {
-                logger.LogTrace($"WriteFileAsync ex {ex.Message}");
+                logger.LogError($"WriteFileAsync ex {ex.Message}");
                 throw;
             }
         }
