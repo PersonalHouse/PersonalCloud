@@ -199,7 +199,7 @@ namespace NSPersonalCloud.Apps.Album
                 var appl = new AppLauncher();
                 appl.AppType = AppType.Web;
                 appl.Name = cfg.Name;
-                appl.WebAddress = "/AppsStatic/album/index.html";
+                appl.WebAddress = "/AppsStatic/album/";
                 appl.AccessKey = Guid.NewGuid().ToString("N");
                 appl.AppId = GetAppId();
 
