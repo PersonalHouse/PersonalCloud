@@ -94,11 +94,19 @@ namespace NSPersonalCloud.FileSharing
                 s = "<!DOCTYPE html><html lang=\"en\"><body><noscript>You need to enable JavaScript to run this app.</noscript><script>" +
                     $"location.href = \'{url}\' </script></body></html>";
             }
+            var b = Encoding.UTF8.GetBytes(s);
             if (start == -1)
             {
-                return new MemoryStream(Encoding.UTF8.GetBytes(s));
+                return new MemoryStream(b);
             }
-
+            if (start>=b.Length)
+            {
+                return Stream.Null;
+            }
+            if ((count+ start) > b.Length)
+            {
+                count = b.Length - start;
+            }
             return new MemoryStream(Encoding.UTF8.GetBytes(s), start, count);
         }
 

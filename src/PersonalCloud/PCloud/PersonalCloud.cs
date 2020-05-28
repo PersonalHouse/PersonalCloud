@@ -78,6 +78,7 @@ namespace NSPersonalCloud
             {
                 Apps.Add(appl);
             }
+            UpdateTimeStamp = DateTime.UtcNow.ToFileTime();
         }
 
         public Uri GetWebAppUri(AppLauncher launcher)

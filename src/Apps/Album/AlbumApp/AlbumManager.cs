@@ -190,6 +190,7 @@ namespace NSPersonalCloud.Apps.Album
         public List<AppLauncher> Config(string configjsons)
         {
             CleanCache();
+            Console.WriteLine($"Album config {configjsons}");
             var cfgs = JsonConvert.DeserializeObject<List<AlbumConfig>>(configjsons);
             var lis = new List<AppLauncher>();
             foreach (var cfg in cfgs)

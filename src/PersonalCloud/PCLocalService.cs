@@ -571,6 +571,7 @@ namespace NSPersonalCloud
             var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
             if (appmgr != null)
             {
+                var updatenet = false;
                 List<AppLauncher> appls = null;
                 try
                 {
@@ -594,7 +595,12 @@ namespace NSPersonalCloud
                         appl.NodeId = NodeId;
                         appl.AppId = appid;
                         pc.AddApp(appl);
+                        updatenet = true;
                     }
+                }
+                if (updatenet)
+                {
+                    this.NetworkRefeshNodes();
                 }
             }
 

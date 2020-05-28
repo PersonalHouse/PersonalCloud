@@ -246,9 +246,13 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             imginfo.Day = (byte)tm.Day;
             _dbConnection.Update(imginfo);
 
+            UpdateYearMonthDayCatalog(imginfo);
+        }
+        private void UpdateYearMonthDayCatalog(ImageInfo imginfo)
+        {
             lock (YearMonthDays)
             {
-                if(!YearMonthDays.ContainsKey(imginfo.Year))
+                if (!YearMonthDays.ContainsKey(imginfo.Year))
                 {
                     YearMonthDays.Add(imginfo.Year, new SortedList<int, SortedSet<int>>(new TimeDesc()));
                 }
@@ -267,7 +271,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
         public async Task SaveYearMonthDays()
         {
             var p = Path.Combine(_dbFolder, Defines.YMDFileName);
-            await File.WriteAllTextAsync(p, Newtonsoft.Json.JsonConvert.SerializeObject(YearMonthDays));
+            var s = Newtonsoft.Json.JsonConvert.SerializeObject(YearMonthDays);
+            Console.WriteLine($"SaveYearMonthDays {s} to {p}");
+            await File.WriteAllTextAsync(p, s).ConfigureAwait(false);
         }
 
         private void GenerateThumbnail(FileInfo file, ImageInfo imginfo, MagickImage image)
@@ -489,6 +495,8 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             }
             fiindb.LastCheckTime = ts;
             _dbConnection.Execute($"update ImageInfo set LastCheckTime={ts} where Id={fiindb.Id}");
+
+            UpdateYearMonthDayCatalog(fiindb);
             return false;
         }
 

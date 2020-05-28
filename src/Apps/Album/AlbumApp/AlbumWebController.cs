@@ -40,6 +40,7 @@ namespace NSPersonalCloud.Apps.Album
                 HttpContext.Response.StatusCode = 403;
                 return;
             }
+            Console.WriteLine($"GetDays {cfg.ThumbnailFolder}");
             var s =  await File.ReadAllTextAsync(Path.Combine(cfg.ThumbnailFolder, Defines.YMDFileName)).ConfigureAwait(false);
             HttpContext.Response.ContentType = MimeType.Json;
             using var responseWriter = HttpContext.OpenResponseText(Encoding.UTF8);
