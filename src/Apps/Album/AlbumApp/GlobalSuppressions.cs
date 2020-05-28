@@ -3,8 +3,6 @@
 // Project-level suppressions either have no target or are given
 // a specific target and scoped to a namespace, type, member, etc.
 
-
 using System.Diagnostics.CodeAnalysis;
 
 [assembly: SuppressMessage("Design", "CA1031", Justification = "Catch general exceptions to avoid crashes.", Scope = "module")]
-[assembly: SuppressMessage("Globalization", "CA1303", Justification = "No localization needed.", Scope = "module")]

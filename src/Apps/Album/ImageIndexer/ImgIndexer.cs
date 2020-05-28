@@ -1,11 +1,13 @@
 ﻿
 using FFmpeg.NET;
+
 using ImageMagick;
+
 using SQLite;
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -14,52 +16,50 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 
+/*
+ * Todo: Remove this section if all fixes to remove warnings are acknowledged and tested.
+ *
+ * 1. Made fields readonly.
+ * 2. Added 'CultureInfo.InvariantCulture' on parameter parsers and comparisons.
+ * 3. Made static string dictionaries uppercase.
+ * 4. Use 'StringComparer' with 'CultureInfo.InvariantCulture' and ignored case in extension lookups.
+ * 5. 
+ *    
+ */
+
 namespace NSPersonalCloud.Apps.Album.ImageIndexer
 {
-    class ImgItemInfo
+    internal class ImgIndexer : IDisposable
     {
-        public string BaseFolder;
-        public FileInfo fileInfo;
-        public long TimeStamp;
-    }
-    class TimeDesc : IComparer<int>
-    {
-        public int Compare([AllowNull] int x, [AllowNull] int y)
-        {
-            return y - x;
-        }
-    }
-
-    class ImgIndexer:IDisposable
-    {
-        private SQLiteConnection _dbConnection;
-        ActionBlock<ImgItemInfo> imgqueue;
-        const int ImageMaxSize = 512;
-        string _dbFolder;
-        SortedList<int, SortedList<int, SortedSet<int>>> YearMonthDays;
+        private readonly SQLiteConnection _dbConnection;
+        private readonly ActionBlock<ImgItemInfo> imgqueue;
+        private const int ImageMaxSize = 512;
+        private readonly string _dbFolder;
+        private readonly SortedList<int, SortedList<int, SortedSet<int>>> YearMonthDays;
 
         //static string[] Extensions = { "bmp", "CR2", "CRW" };
 
-        
-        //lower case
-        static string[] IgnoredExtensions = { ".mp3", ".wma", ".pdf", ".txt", ".dll", ".exe", ".ini", ".inf", 
-            ".iso", ".zip", ".rar", ".7z", ".rtf", ".doc", ".docx", ".lrc" , ".html" , ".htm", ".csv", ".ds_store", 
-            ".srt", ".db" , ".js" , ".css" };
-        static string[] VideoExtensions = { ".mov", ".avi", ".mp4", ".flv", ".mkv", ".asf", ".wmv", ".rmvb",
-            ".rm", ".swf",".mpg",".mpeg", ".vob"};
+
+        // Use uppercase! .NET '.ToLower()' and '.ToLowerInvariant()' are not round-trip.
+        private static readonly string[] IgnoredExtensions = { ".MP3", ".WMA", ".PDF", ".TXT", ".DLL", ".EXE", ".INI", ".INF",
+            ".ISO", ".ZIP", ".RAR", ".7Z", ".RTF", ".DOC", ".DOCX", ".LRC" , ".HTML" , ".HTM", ".CSV", ".DS_STORE",
+            ".SRT", ".DB" , ".JS" , ".CSS" };
+        private static readonly string[] VideoExtensions = { ".MOV", ".AVI", ".MP4", ".FLV", ".MKV", ".ASF", ".WMV", ".RMVB",
+            ".RM", ".SWF",".MPG",".MPEG", ".VOB" };
+
         public ImgIndexer(string dbfolder)
         {
             YearMonthDays = new SortedList<int, SortedList<int, SortedSet<int>>>(new TimeDesc());
             _dbFolder = dbfolder;
             _dbConnection = new SQLiteConnection(Path.Combine(_dbFolder, Defines.DBFileName), SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create);
             _dbConnection.CreateTable<ImageInfo>();
-            imgqueue = new ActionBlock<ImgItemInfo>(Process, 
+            imgqueue = new ActionBlock<ImgItemInfo>(Process,
                new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1 });
             //Environment.ProcessorCount });
 
         }
 
-        public async Task Scan(string folder,long ts )
+        public async Task Scan(string folder, long ts)
         {
             var dir = new DirectoryInfo(folder);
             if (!dir.Exists)
@@ -67,7 +67,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 return;
             }
             var dirst = new List<DirectoryInfo>() { dir };
-            while (dirst.Count>0)
+            while (dirst.Count > 0)
             {
                 var cur = dirst[0];
                 dirst.RemoveAt(0);
@@ -83,7 +83,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
             }
             imgqueue.Complete();
-            await imgqueue.Completion;
+            await imgqueue.Completion.ConfigureAwait(false);
         }
         public void CleanNotExistImages(long ts)
         {
@@ -97,22 +97,21 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
 
         }
 
-        
-        async Task Process(ImgItemInfo info)
+        private async Task Process(ImgItemInfo info)
         {
             var file = info.fileInfo;
             try
             {
                 var p = Path.GetRelativePath(info.BaseFolder, file.FullName);
                 var isvideo = IsExtForVideo(file.Extension);
-                if (isvideo==0)//whether known file format
+                if (isvideo == 0)//whether known file format
                 {
                     _ = Enum.Parse(typeof(MagickFormat), file.Extension.Substring(1), true);
                 }
 
                 if (!NeedUpdate(p, info.fileInfo, info.TimeStamp))
                 {
-                    return ;
+                    return;
                 }
 
                 var imginfo = _dbConnection.Table<ImageInfo>().FirstOrDefault(x => x.Path == p);
@@ -130,10 +129,10 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
                 imginfo.LastCheckTime = info.TimeStamp;
 
-                if (imginfo.IsVideo>0)
+                if (imginfo.IsVideo > 0)
                 {
                     UpdateYearMonthDay(imginfo);
-                    await GenerateVideoThumbnail(file, imginfo);
+                    await GenerateVideoThumbnail(file, imginfo).ConfigureAwait(false);
                 }
                 else
                 {
@@ -152,7 +151,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                         UpdateYearMonthDay(imginfo);
 
                         GenerateThumbnail(file, imginfo, image);
-                        if (imginfo.Width==0)
+                        if (imginfo.Width == 0)
                         {
                             var thpath = Path.Combine(_dbFolder, Defines.ThumbnailFileName);
                             Directory.CreateDirectory(thpath);
@@ -180,22 +179,22 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 var outputFile = new MediaFile(des);
                 var inputFile = new MediaFile(file.FullName);
                 var ffmpeg = new Engine(Path.Combine(curdir, "ffmpeg.exe"));
-                var metadata = await ffmpeg.GetMetaDataAsync(inputFile);
+                var metadata = await ffmpeg.GetMetaDataAsync(inputFile).ConfigureAwait(false);
                 if (metadata?.Duration.TotalSeconds > 5)
                 {
                     var options = new ConversionOptions { Seek = TimeSpan.FromSeconds(5) };
-                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options);
+                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options).ConfigureAwait(false);
                 }
                 else
                 {
                     var options = new ConversionOptions { Seek = TimeSpan.FromSeconds(0) };
-                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options);
+                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options).ConfigureAwait(false);
                 }
                 var fsizea = metadata?.VideoData?.FrameSize.Split('x', StringSplitOptions.RemoveEmptyEntries);
                 if (fsizea?.Length == 2)
                 {
-                    imginfo.Width = int.Parse(fsizea[0]);
-                    imginfo.Height = int.Parse(fsizea[1]);
+                    imginfo.Width = int.Parse(fsizea[0], CultureInfo.InvariantCulture);
+                    imginfo.Height = int.Parse(fsizea[1], CultureInfo.InvariantCulture);
                     _dbConnection.Update(imginfo);
                 }
                 else
@@ -218,37 +217,45 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             }
         }
 
-        private byte IsExtForVideo(string ext)
+        private static byte IsExtForVideo(string ext)
         {
+            /*
             var ex = ext.ToLowerInvariant();
             if (VideoExtensions.FirstOrDefault(x => string.Compare(ex, x, false, CultureInfo.InvariantCulture) == 0) != null)
             {
                 return 1;
             }
             return 0;
+            */
+
+            return VideoExtensions.Contains(ext, StringComparer.Create(CultureInfo.InvariantCulture, true)) ? (byte) 1 : (byte) 0;
         }
 
-        private bool IsIgnoredFiles(string ext)
+        private static bool IsIgnoredFiles(string ext)
         {
+            /*
             var ex = ext.ToLowerInvariant();
-            if (IgnoredExtensions.FirstOrDefault(x=> string.Compare(ex, x,false, CultureInfo.InvariantCulture) == 0)!=null)
+            if (IgnoredExtensions.FirstOrDefault(x => string.Compare(ex, x, false, CultureInfo.InvariantCulture) == 0) != null)
             {
                 return true;
             }
             return false;
+            */
+
+            return IgnoredExtensions.Contains(ext, StringComparer.Create(CultureInfo.InvariantCulture, true));
         }
 
         private void UpdateYearMonthDay(ImageInfo imginfo)
         {
             DateTime tm = DateTime.FromFileTimeUtc(imginfo.MediaTime).ToLocalTime();
-            imginfo.Year = (short)tm.Year;
-            imginfo.Month = (byte)tm.Month;
-            imginfo.Day = (byte)tm.Day;
+            imginfo.Year = (short) tm.Year;
+            imginfo.Month = (byte) tm.Month;
+            imginfo.Day = (byte) tm.Day;
             _dbConnection.Update(imginfo);
 
             lock (YearMonthDays)
             {
-                if(!YearMonthDays.ContainsKey(imginfo.Year))
+                if (!YearMonthDays.ContainsKey(imginfo.Year))
                 {
                     YearMonthDays.Add(imginfo.Year, new SortedList<int, SortedSet<int>>(new TimeDesc()));
                 }
@@ -267,7 +274,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
         public async Task SaveYearMonthDays()
         {
             var p = Path.Combine(_dbFolder, Defines.YMDFileName);
-            await File.WriteAllTextAsync(p, Newtonsoft.Json.JsonConvert.SerializeObject(YearMonthDays));
+            await File.WriteAllTextAsync(p, Newtonsoft.Json.JsonConvert.SerializeObject(YearMonthDays)).ConfigureAwait(false);
         }
 
         private void GenerateThumbnail(FileInfo file, ImageInfo imginfo, MagickImage image)
@@ -276,7 +283,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             Directory.CreateDirectory(thpath);
 
             var ext = file.Extension;
-            if (CouldFileTypeShowInWeb(ext, image)|| (imginfo.IsVideo>0))
+            if (CouldFileTypeShowInWeb(ext, image) || (imginfo.IsVideo > 0))
             {
                 MagickGeometry size = null;
                 var width = image.Width;
@@ -297,9 +304,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             image.Write(Path.Combine(thpath, $"{imginfo.Id}.jpg"));
         }
 
-        private bool CouldFileTypeShowInWeb(string ext, MagickImage image)
+        private static bool CouldFileTypeShowInWeb(string ext, MagickImage image)
         {
-            if (image.Format==MagickFormat.Jpeg)
+            if (image.Format == MagickFormat.Jpeg)
             {
                 return true;
             }
@@ -319,34 +326,34 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             {
                 if (string.Compare(value.Tag.ToString(), "Make", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.Make = (string)value.GetValue();
+                    imginfo.Make = (string) value.GetValue();
                 }
                 else if (string.Compare(value.Tag.ToString(), "Model", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.Model = (string)value.GetValue();
+                    imginfo.Model = (string) value.GetValue();
                 }
                 else if (string.Compare(value.Tag.ToString(), "Software", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.Software = (string)value.GetValue();
+                    imginfo.Software = (string) value.GetValue();
                 }
                 else if (string.Compare(value.Tag.ToString(), "LensMake", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.LensMake = (string)value.GetValue();
+                    imginfo.LensMake = (string) value.GetValue();
                 }
                 else if (string.Compare(value.Tag.ToString(), "LensModel", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.LensModel = (string)value.GetValue();
+                    imginfo.LensModel = (string) value.GetValue();
                 }
                 else if (string.Compare(value.Tag.ToString(), "DateTime", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    imginfo.StrExifDateTime = (string)value.GetValue();
+                    imginfo.StrExifDateTime = (string) value.GetValue();
                     imginfo.ExifDateTime = ParseDatetime(imginfo.StrExifDateTime);
                 }
                 else if (string.Compare(value.Tag.ToString(), "DateTimeOriginal", true, CultureInfo.InvariantCulture) == 0)
                 {
                     if (string.IsNullOrWhiteSpace(imginfo.StrExifDateTime))
                     {
-                        imginfo.StrExifDateTime = (string)value.GetValue();
+                        imginfo.StrExifDateTime = (string) value.GetValue();
                         imginfo.ExifDateTime = ParseDatetime(imginfo.StrExifDateTime);
                     }
                 }
@@ -354,13 +361,13 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 {
                     if (string.IsNullOrWhiteSpace(imginfo.StrExifDateTime))
                     {
-                        imginfo.StrExifDateTime = (string)value.GetValue();
+                        imginfo.StrExifDateTime = (string) value.GetValue();
                         imginfo.ExifDateTime = ParseDatetime(imginfo.StrExifDateTime);
                     }
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSLatitudeRef", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var n = (string)value.GetValue();
+                    var n = (string) value.GetValue();
                     if (string.Compare(n, "N", true, CultureInfo.InvariantCulture) == 0)
                     {
                         isnorth = true;
@@ -372,19 +379,19 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSLatitude", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var rs = (Rational[])value.GetValue();
+                    var rs = (Rational[]) value.GetValue();
                     double v = 0;
                     int e = 1;
                     for (int i = 0; i < rs.Length; i++)
                     {
-                        v += ((double)rs[i].Numerator) / (rs[i].Denominator * e);
+                        v += ((double) rs[i].Numerator) / (rs[i].Denominator * e);
                         e *= 60;
                     }
                     imginfo.Latitude = v;
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSLongitudeRef", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var e = (string)value.GetValue();
+                    var e = (string) value.GetValue();
                     if (string.Compare(e, "E", true, CultureInfo.InvariantCulture) == 0)
                     {
                         iseast = true;
@@ -396,19 +403,19 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSLongitude", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var rs = (Rational[])value.GetValue();
+                    var rs = (Rational[]) value.GetValue();
                     double v = 0;
                     int e = 1;
                     for (int i = 0; i < rs.Length; i++)
                     {
-                        v += ((double)rs[i].Numerator) / (rs[i].Denominator * e);
+                        v += ((double) rs[i].Numerator) / (rs[i].Denominator * e);
                         e *= 60;
                     }
                     imginfo.Longitude = v;
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSAltitudeRef", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var e = (byte)value.GetValue();
+                    var e = (byte) value.GetValue();
                     if (e == 0)
                     {
                         abovesea = true;
@@ -420,8 +427,8 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
                 else if (string.Compare(value.Tag.ToString(), "GPSAltitude", true, CultureInfo.InvariantCulture) == 0)
                 {
-                    var rs = (Rational)value.GetValue();
-                    imginfo.Altitude = ((double)rs.Numerator) / rs.Denominator ;
+                    var rs = (Rational) value.GetValue();
+                    imginfo.Altitude = ((double) rs.Numerator) / rs.Denominator;
                 }
             }
             if (imginfo.Latitude != null)
@@ -452,27 +459,40 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             _dbConnection.Update(imginfo);
         }
 
-        private long? ParseDatetime(string strExifDateTime)
+        private static long? ParseDatetime(string strExifDateTime)
         {
-            string format = "yyyy:MM:dd HH:mm:ss";
+            const string format = "yyyy:MM:dd HH:mm:ss";
+
+            if (DateTime.TryParseExact(strExifDateTime, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                return parsed.ToFileTime();
+            }
+            else if (DateTime.TryParse(strExifDateTime, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsed))
+            {
+                return parsed.ToFileTime();
+            }
+            else return null;
+
+            /*
             try
             {
                 return DateTime.ParseExact(strExifDateTime, format, CultureInfo.InvariantCulture).ToFileTime();
             }
-            catch (Exception )
+            catch (Exception)
             {
             }
             try
             {
                 return DateTime.Parse(strExifDateTime, CultureInfo.InvariantCulture).ToFileTime();
             }
-            catch (Exception )
+            catch (Exception)
             {
             }
             return null;
+            */
         }
 
-        private bool NeedUpdate(string p, FileInfo info,long ts)
+        private bool NeedUpdate(string p, FileInfo info, long ts)
         {
             var fiindb = _dbConnection.Table<ImageInfo>().FirstOrDefault(x => x.Path == p);
             if (fiindb == null)

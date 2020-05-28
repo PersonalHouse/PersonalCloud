@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,22 +15,24 @@ namespace NSPersonalCloud.FileSharing
 {
     public class FileSystemContainer : IFileSystem
     {
-        Dictionary<string, IFileSystem> _SubFss;
-        ILogger logger;
+        private readonly Dictionary<string, IFileSystem> _SubFss;
+        private readonly ILogger logger;
 
-        public FileSystemContainer(Dictionary<string, IFileSystem> subfss,ILogger l)//case sensitive
+        public FileSystemContainer(Dictionary<string, IFileSystem> subfss, ILogger l) //case sensitive
         {
             logger = l;
             _SubFss = subfss;
         }
         public static string GetRootFolder(string path, out string subpath)
         {
+            if (path is null) throw new ArgumentNullException(nameof(path));
+
             string[] items = path.Split(new char[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             if (items?.Length > 0)
             {
                 if (items.Length > 1)
                 {
-                    subpath = '/'+string.Join('/', items, 1, items.Length - 1);
+                    subpath = '/' + string.Join('/', items, 1, items.Length - 1);
                 }
                 else
                 {
@@ -42,7 +43,8 @@ namespace NSPersonalCloud.FileSharing
             subpath = null;
             return null;
         }
-        IFileSystem GetSubFs(string path, out string subpath)
+
+        private IFileSystem GetSubFs(string path, out string subpath)
         {
             var cpath = GetRootFolder(path, out subpath);
             if (cpath != null)
@@ -54,7 +56,7 @@ namespace NSPersonalCloud.FileSharing
                         return _SubFss[cpath];
                     }
                 }
-                throw new FileNotFoundException($"Unknow folder: {path}.");
+                throw new FileNotFoundException($"Unknown folder: {path}.");
             }
             return null;
         }
@@ -117,7 +119,7 @@ namespace NSPersonalCloud.FileSharing
         // If you want to implement both "*" and "?"
         private static string WildCardToRegular(string value)
         {
-            return "^" + Regex.Escape(value).Replace("\\?", ".").Replace("\\*", ".*") + "$";
+            return "^" + Regex.Escape(value).Replace("\\?", ".", StringComparison.Ordinal).Replace("\\*", ".*", StringComparison.Ordinal) + "$";
         }
 
 
@@ -164,7 +166,7 @@ namespace NSPersonalCloud.FileSharing
                     TotalSize += fs.TotalNumberOfBytes;
                     AvailableFreeSpace += fs.TotalNumberOfFreeBytes;
                 }
-                catch (Exception ex)
+                catch
                 {
                 }
             }
@@ -182,7 +184,7 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -215,7 +217,7 @@ namespace NSPersonalCloud.FileSharing
             }
             catch (Exception e)
             {
-                logger.LogError(e,$"ReadMetadataAsync {path}");
+                logger.LogError(e, $"ReadMetadataAsync {path}");
                 throw;
             }
         }
@@ -226,7 +228,7 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -241,7 +243,7 @@ namespace NSPersonalCloud.FileSharing
             var fs2 = GetSubFs(name, out var subpath2);
             if ((fs == null) || (fs2 != fs))
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -255,7 +257,7 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -269,7 +271,7 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -283,7 +285,7 @@ namespace NSPersonalCloud.FileSharing
             var fs = GetSubFs(path, out var subpath);
             if (fs == null)
             {
-                throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                throw new UnauthorizedAccessException($"Unknown path: {path}.");
             }
             else
             {
@@ -299,7 +301,7 @@ namespace NSPersonalCloud.FileSharing
                 var fs = GetSubFs(path, out var subpath);
                 if (fs == null)
                 {
-                    throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                    throw new UnauthorizedAccessException($"Unknown path: {path}.");
                 }
                 else
                 {
@@ -328,7 +330,7 @@ namespace NSPersonalCloud.FileSharing
                 var fs = GetSubFs(path, out var subpath);
                 if (fs == null)
                 {
-                    throw new UnauthorizedAccessException($"Unknow path: {path}.");
+                    throw new UnauthorizedAccessException($"Unknown path: {path}.");
                 }
                 else
                 {

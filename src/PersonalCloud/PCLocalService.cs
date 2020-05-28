@@ -28,8 +28,7 @@ using Standart.Hash.xxHash;
 
 namespace NSPersonalCloud
 {
-
-    class NodeShareInfo
+    internal class NodeShareInfo
     {
         public string NodeId;
         public string Url;
@@ -38,7 +37,8 @@ namespace NSPersonalCloud
         public ulong Hash;
         public string PCId;
     }
-    class FetchQueueItem
+
+    internal class FetchQueueItem
     {
         public NodeInfo Node;
         public bool IsFetching;
@@ -47,20 +47,19 @@ namespace NSPersonalCloud
 
     public class PCLocalService : IDisposable, IPCService
     {
-        readonly ILoggerFactory loggerFactory;
-        readonly ILogger logger;
+        private readonly ILoggerFactory loggerFactory;
+        private readonly ILogger logger;
 
         private IConfigStorage ConfigStorage { get; }
         private VirtualFileSystem FileSystem { get; }
-        string ExtraWebPath;
 
-        NodeDiscovery nodeDiscovery;
-        HttpClient httpclient;
-        readonly List<NodeShareInfo> sharedPCs;
-        readonly Dictionary<string, NodeInfo> KnownNodes;
-
-        readonly ActionBlock<NodeInfo> fetchCloudInfo;
-        readonly List<FetchQueueItem> fetchQueue;
+        private readonly string ExtraWebPath;
+        private NodeDiscovery nodeDiscovery;
+        private HttpClient httpclient;
+        private readonly List<NodeShareInfo> sharedPCs;
+        private readonly Dictionary<string, NodeInfo> KnownNodes;
+        private readonly ActionBlock<NodeInfo> fetchCloudInfo;
+        private readonly List<FetchQueueItem> fetchQueue;
 
         public int ServerPort { get; private set; }
 
@@ -76,7 +75,7 @@ namespace NSPersonalCloud
         /// used in lock(_PersonalClouds){}
         /// </summary>
         private List<PersonalCloud> _PersonalClouds;
-        WebServer WebServer;
+        private WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
         public ShareController CreateShareController() => new ShareController(FileSystem, this);
@@ -119,7 +118,7 @@ namespace NSPersonalCloud
         }
 
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
-        async Task EmbedIOResponseSerializerCallback(IHttpContext context, object? data)
+        private async Task EmbedIOResponseSerializerCallback(IHttpContext context, object? data)
 #pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
         {
             context.Response.ContentType = MimeType.Json;
@@ -131,7 +130,7 @@ namespace NSPersonalCloud
                 new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore })).ConfigureAwait(false);
         }
 
-        void InitWebServer()
+        private void InitWebServer()
         {
             if (WebServer != null)
             {
@@ -161,7 +160,7 @@ namespace NSPersonalCloud
 
         #region Node discovery
 
-        async Task GetNodeClodeInfo(NodeInfo _)
+        private async Task GetNodeClodeInfo(NodeInfo _)
         {
             NodeInfo node = null;
             FetchQueueItem curnodeinfo = null;
@@ -538,8 +537,9 @@ namespace NSPersonalCloud
         #endregion
 
         #region Apps
-        List<IAppManager> AppMgrs;
-        List<IAppManager> GetAppMgrs()
+        private List<IAppManager> AppMgrs;
+
+        private List<IAppManager> GetAppMgrs()
         {
             if (AppMgrs == null)
             {

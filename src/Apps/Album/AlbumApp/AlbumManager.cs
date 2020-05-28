@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -16,21 +17,29 @@ using Newtonsoft.Json;
 
 using NSPersonalCloud.Interfaces.Apps;
 
+/*
+ * Todo: Remove this section if all fixes to remove warnings are acknowledged and tested.
+ *
+ * 1. Initialized 'Dictionary<string, AlbumConfig> Cache' without using static constructor.
+ *    (Previously using static constructor.)
+ * 2. Made interface implementation 'IAppManager.ConfigWebController()' and 'IAppManager.InstallWebStatiFiles()' public.
+ *    (Previously not explicitly marked.)
+ * 3. Made 'IndexOneAlbum()' static.
+ * 4. Added explicit accessibility modifiers on properties and methods.
+ */
+
 namespace NSPersonalCloud.Apps.Album
 {
     public class AlbumManager : IAppManager
     {
-        private static readonly Dictionary<string, AlbumConfig> Cache;
-        static AlbumManager()
-        {
-            Cache = new Dictionary<string, AlbumConfig>();
-        }
+        private static readonly Dictionary<string, AlbumConfig> Cache = new Dictionary<string, AlbumConfig>();
+
         private static Task IndexerTask;
-        CancellationTokenSource cts;
 
+        // Todo: Dispose!
+        private CancellationTokenSource cts;
 
-
-        AlbumConfig GetFromCache(string key)
+        private AlbumConfig GetFromCache(string key)
         {
             lock (Cache)
             {
@@ -41,8 +50,10 @@ namespace NSPersonalCloud.Apps.Album
             }
             return null;
         }
+
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
-        async Task EmbedIOResponseSerializerCallback(IHttpContext context, object? data)
+
+        private async Task EmbedIOResponseSerializerCallback(IHttpContext context, object? data)
 #pragma warning restore CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
         {
             context.Response.ContentType = MimeType.Json;
@@ -51,34 +62,41 @@ namespace NSPersonalCloud.Apps.Album
                 new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
         }
 
-        EmbedIO.WebServer IAppManager.ConfigWebController(string id, string path, EmbedIO.WebServer webServer)
+        public WebServer ConfigWebController(string id, string path, WebServer webServer)
         {
             return webServer.WithWebApi(id, path, EmbedIOResponseSerializerCallback,
                 module => module.WithController(() => new AlbumWebController(GetFromCache)));
         }
 
-
         /// <summary>
-        /// Retrieves the specified [embedded] resource file and saves it to disk.  
-        /// If only filename is provided then the file is saved to the default 
-        /// directory, otherwise the full filepath will be used.
+        /// Retrieves the specified [embedded] resource file and saves it to disk. If only filename
+        /// is provided then the file is saved to the default directory, otherwise the full filepath
+        /// will be used.
         /// <para>
-        /// Note: if the embedded resource resides in a different assembly use that
-        /// assembly instance with this extension method.
+        /// Note: if the embedded resource resides in a different assembly use that assembly
+        /// instance with this extension method.
         /// </para>
         /// </summary>
         /// <example>
         /// <code>
-        ///       Assembly.GetExecutingAssembly().ExtractResource("Ng-setup.cmd");
-        ///       OR
-        ///       Assembly.GetExecutingAssembly().ExtractResource("Ng-setup.cmd", "C:\temp\MySetup.cmd");
+        ///Assembly.GetExecutingAssembly().ExtractResource("Ng-setup.cmd");
+        ///OR
+        ///Assembly.GetExecutingAssembly().ExtractResource("Ng-setup.cmd", "C:\temp\MySetup.cmd");
         /// </code>
         /// </example>
-        /// <param name="assembly">The assembly.</param>
-        /// <param name="resourceName">Name of the resource.</param>
-        /// <param name="fileName">Name of the file.</param>
+        /// <param name="assembly">
+        /// The assembly.
+        /// </param>
+        /// <param name="resourceName">
+        /// Name of the resource.
+        /// </param>
+        /// <param name="fileName">
+        /// Name of the file.
+        /// </param>
         public static void ExtractResource(Assembly assembly, string filename, string path = null)
         {
+            if (assembly is null) throw new ArgumentNullException(nameof(assembly));
+
             //Construct the full path name for the output file
             var outputFile = path ?? $@"{Directory.GetCurrentDirectory()}\{filename}";
 
@@ -95,7 +113,7 @@ namespace NSPersonalCloud.Apps.Album
             }
         }
 
-        Task IAppManager.InstallWebStatiFiles(string path)
+        public Task InstallWebStatiFiles(string path)
         {
             try
             {
@@ -107,13 +125,12 @@ namespace NSPersonalCloud.Apps.Album
             }
             catch (Exception)
             {
-
                 //throw;
             }
             return Task.CompletedTask;
         }
 
-        async Task ImageIndexerScheduler()
+        private async Task ImageIndexerScheduler()
         {
             try
             {
@@ -142,13 +159,13 @@ namespace NSPersonalCloud.Apps.Album
             }
             catch (Exception)
             {
-
                 throw;
             }
         }
-        async Task IndexOneAlbum(string exepath, string src,string des,  CancellationToken tk)
+
+        private static async Task IndexOneAlbum(string exepath, string src, string des, CancellationToken tk)
         {
-            var si = new ProcessStartInfo(exepath,$" -O \"{des}\" -I \"{src}\" ");
+            var si = new ProcessStartInfo(exepath, $" -O \"{des}\" -I \"{src}\" ");
             using var proc = new Process();
             proc.StartInfo = si;
             proc.Start();
@@ -160,19 +177,20 @@ namespace NSPersonalCloud.Apps.Album
                     proc.Kill();
                 }
                 await Task.Delay(30 * 1000, tk).ConfigureAwait(false);
-                
+
                 if (tk.IsCancellationRequested)
                 {
                     proc.Kill();
                 }
                 ++i;
-                if (i>(60*2))
+                if (i > (60 * 2))
                 {
                     proc.Kill();
                 }
             }
         }
-        void CleanCache()
+
+        private void CleanCache()
         {
             lock (Cache)
             {
@@ -194,7 +212,6 @@ namespace NSPersonalCloud.Apps.Album
             var lis = new List<AppLauncher>();
             foreach (var cfg in cfgs)
             {
-
                 var appl = new AppLauncher();
                 appl.AppType = AppType.Web;
                 appl.Name = cfg.Name;
@@ -205,10 +222,10 @@ namespace NSPersonalCloud.Apps.Album
                 lock (Cache)
                 {
                     Cache.Add(appl.AccessKey, cfg);
-                    if (IndexerTask==null)
+                    if (IndexerTask == null)
                     {
                         cts = new CancellationTokenSource();
-                        IndexerTask = Task.Run(ImageIndexerScheduler,cts.Token);
+                        IndexerTask = Task.Run(ImageIndexerScheduler, cts.Token);
                     }
                 }
                 lis.Add(appl);
@@ -220,6 +237,5 @@ namespace NSPersonalCloud.Apps.Album
         {
             return "Album";
         }
-
     }
 }
