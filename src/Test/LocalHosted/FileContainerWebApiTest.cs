@@ -36,6 +36,7 @@ namespace LocalHosted
 
         private HttpProvider Server { get; set; }
         private TopFolderClient Client { get; set; }
+        ILoggerFactory Loggers;
 
         [OneTimeSetUp]
         public void Setup()
@@ -56,10 +57,10 @@ namespace LocalHosted
             var logsDir = Path.Combine(TestRoot, "Logs");
             Directory.CreateDirectory(logsDir);
 
-                var Loggers = LoggerFactory.Create(builder => builder.//SetMinimumLevel(LogLevel.Trace).
-                AddConsole(x => {
-                    x.TimestampFormat = "G";
-                }).AddFile(Path.Combine(logsDir, "test.log"),/*LogLevel.Trace,*/ fileSizeLimitBytes: 6291456, retainedFileCountLimit: 3));
+            Loggers = LoggerFactory.Create(builder => builder.//SetMinimumLevel(LogLevel.Trace).
+            AddConsole(x => {
+                x.TimestampFormat = "G";
+            }));
 
 
             var dic = new Dictionary<string, IFileSystem>();
@@ -89,6 +90,7 @@ namespace LocalHosted
 
             Client?.Dispose();
             Server?.Dispose();
+            Loggers?.Dispose();
         }
 
         [SetUp]
