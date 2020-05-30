@@ -26,6 +26,10 @@ namespace NSPersonalCloud.FileSharing
         }
         public static string GetRootFolder(string path, out string subpath)
         {
+            if (path==null)
+            {
+                throw new InvalidProgramException("GetRootFolder:path is null");
+            }
             string[] items = path.Split(new char[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             if (items?.Length > 0)
             {
@@ -164,7 +168,7 @@ namespace NSPersonalCloud.FileSharing
                     TotalSize += fs.TotalNumberOfBytes;
                     AvailableFreeSpace += fs.TotalNumberOfFreeBytes;
                 }
-                catch (Exception ex)
+                catch (Exception )
                 {
                 }
             }

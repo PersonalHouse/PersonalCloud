@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using EmbedIO;
 using EmbedIO.WebApi;
 
+using Microsoft.Extensions.Logging;
+
 using NSPersonalCloud;
 using NSPersonalCloud.FileSharing;
 using NSPersonalCloud.Interfaces.FileSystem;
@@ -34,6 +36,7 @@ namespace LocalHosted
 
         private HttpProvider Server { get; set; }
         private TopFolderClient Client { get; set; }
+        ILoggerFactory Loggers;
 
         [OneTimeSetUp]
         public void Setup()
@@ -51,9 +54,19 @@ namespace LocalHosted
 
             Directory.CreateDirectory(TestRoot);
 
+            var logsDir = Path.Combine(TestRoot, "Logs");
+            Directory.CreateDirectory(logsDir);
+
+            Loggers = LoggerFactory.Create(builder => builder.//SetMinimumLevel(LogLevel.Trace).
+            AddConsole(x => {
+                x.TimestampFormat = "G";
+            }));
+
+
             var dic = new Dictionary<string, IFileSystem>();
             dic["Files"] = new VirtualFileSystem(TestRoot);
-            var RootFs = new FileSystemContainer(dic);
+
+            var RootFs = new FileSystemContainer(dic, Loggers.CreateLogger("FileContainerWebApiTest"));
 
             Server = new HttpProvider(10240, RootFs);
             Server.Start();
@@ -77,6 +90,7 @@ namespace LocalHosted
 
             Client?.Dispose();
             Server?.Dispose();
+            Loggers?.Dispose();
         }
 
         [SetUp]

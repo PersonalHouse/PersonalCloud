@@ -180,16 +180,16 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 var outputFile = new MediaFile(des);
                 var inputFile = new MediaFile(file.FullName);
                 var ffmpeg = new Engine(Path.Combine(curdir, "ffmpeg.exe"));
-                var metadata = await ffmpeg.GetMetaDataAsync(inputFile);
+                var metadata = await ffmpeg.GetMetaDataAsync(inputFile).ConfigureAwait(false);
                 if (metadata?.Duration.TotalSeconds > 5)
                 {
                     var options = new ConversionOptions { Seek = TimeSpan.FromSeconds(5) };
-                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options);
+                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options).ConfigureAwait(false);
                 }
                 else
                 {
                     var options = new ConversionOptions { Seek = TimeSpan.FromSeconds(0) };
-                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options);
+                    await ffmpeg.GetThumbnailAsync(inputFile, outputFile, options).ConfigureAwait(false);
                 }
                 var fsizea = metadata?.VideoData?.FrameSize.Split('x', StringSplitOptions.RemoveEmptyEntries);
                 if (fsizea?.Length == 2)
