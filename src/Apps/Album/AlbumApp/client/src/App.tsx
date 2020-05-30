@@ -7,6 +7,14 @@ import './App.css';
 export default class App extends Component {
   static displayName = App.name;
 
+  constructor(props:any) {
+    super(props)
+    let acckey = this.getQueryVariable("AccKey");
+    if(acckey){
+      this.setCookie('AccKey',acckey);
+    }
+  }
+
   setCookie(name: string, value: string, days: number | void) {
     var expires = "";
     if (days) {
@@ -33,12 +41,12 @@ export default class App extends Component {
 
   getQueryVariable(variable: string) {
     var query = window.location.search.substring(1);
-    console.log(query)//"app=article&act=news_content&aid=160990"
+    //console.log(query)//"app=article&act=news_content&aid=160990"
     var vars = query.split("&");
-    console.log(vars) //[ 'app=article', 'act=news_content', 'aid=160990' ]
+    //console.log(vars) //[ 'app=article', 'act=news_content', 'aid=160990' ]
     for (var i = 0; i < vars.length; i++) {
       var pair = vars[i].split("=");
-      console.log(pair)//[ 'app', 'article' ][ 'act', 'news_content' ][ 'aid', '160990' ] 
+      //console.log(pair)//[ 'app', 'article' ][ 'act', 'news_content' ][ 'aid', '160990' ] 
       if (pair[0] === variable) { return pair[1]; }
     }
     return null;
