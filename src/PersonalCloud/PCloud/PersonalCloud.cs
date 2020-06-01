@@ -364,7 +364,7 @@ namespace NSPersonalCloud
                             {
                                 return;
                             }
-                            var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.AccessKey == ai.AccessKey));
+                            var a = Apps.FirstOrDefault(x => (x.NodeId == ai.NodeId) && (x.AppId == ai.AppId) && (x.Name == ai.Name));
                             if (a == null)
                             {
                                 lock (Apps)
