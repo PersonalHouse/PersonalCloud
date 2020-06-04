@@ -42,11 +42,11 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
 
         
         //lower case
-        static string[] IgnoredExtensions = { ".mp3", ".wma", ".pdf", ".txt", ".dll", ".exe", ".ini", ".inf", 
-            ".iso", ".zip", ".rar", ".7z", ".rtf", ".doc", ".docx", ".lrc" , ".html" , ".htm", ".csv", ".ds_store", 
-            ".srt", ".db" , ".js" , ".css" };
-        static string[] VideoExtensions = { ".mov", ".avi", ".mp4", ".flv", ".mkv", ".asf", ".wmv", ".rmvb",
-            ".rm", ".swf",".mpg",".mpeg", ".vob"};
+        static string[] IgnoredExtensions = { ".MP3", ".WMA", ".PDF", ".TXT", ".DLL", ".EXE", ".INI", ".INF",
+            ".ISO", ".ZIP", ".RAR", ".7Z", ".RTF", ".DOC", ".DOCX", ".LRC" , ".HTML" , ".HTM", ".CSV", ".DS_STORE",
+            ".SRT", ".DB" , ".JS" , ".CSS",".PLASSET" };
+        static string[] VideoExtensions = { ".MOV", ".AVI", ".MP4", ".FLV", ".MKV", ".ASF", ".WMV", ".RMVB",
+            ".RM", ".SWF",".MPG",".MPEG", ".VOB"};
         public ImgIndexer(string dbfolder)
         {
             YearMonthDays = new SortedList<int, SortedList<int, SortedSet<int>>>(new TimeDesc());
@@ -83,7 +83,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
             }
             imgqueue.Complete();
-            await imgqueue.Completion;
+            await imgqueue.Completion.ConfigureAwait(false);
         }
         public void CleanNotExistImages(long ts)
         {
@@ -133,7 +133,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 if (imginfo.IsVideo>0)
                 {
                     UpdateYearMonthDay(imginfo);
-                    await GenerateVideoThumbnail(file, imginfo);
+                    await GenerateVideoThumbnail(file, imginfo).ConfigureAwait(false);
                 }
                 else
                 {
@@ -194,8 +194,8 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 var fsizea = metadata?.VideoData?.FrameSize.Split('x', StringSplitOptions.RemoveEmptyEntries);
                 if (fsizea?.Length == 2)
                 {
-                    imginfo.Width = int.Parse(fsizea[0]);
-                    imginfo.Height = int.Parse(fsizea[1]);
+                    imginfo.Width = int.Parse(fsizea[0],CultureInfo.InvariantCulture);
+                    imginfo.Height = int.Parse(fsizea[1], CultureInfo.InvariantCulture);
                     _dbConnection.Update(imginfo);
                 }
                 else
@@ -218,9 +218,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             }
         }
 
-        private byte IsExtForVideo(string ext)
+        private static byte IsExtForVideo(string ext)
         {
-            var ex = ext.ToLowerInvariant();
+            var ex = ext.ToUpperInvariant();
             if (VideoExtensions.FirstOrDefault(x => string.Compare(ex, x, false, CultureInfo.InvariantCulture) == 0) != null)
             {
                 return 1;
@@ -228,9 +228,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             return 0;
         }
 
-        private bool IsIgnoredFiles(string ext)
+        private static bool IsIgnoredFiles(string ext)
         {
-            var ex = ext.ToLowerInvariant();
+            var ex = ext.ToUpperInvariant();
             if (IgnoredExtensions.FirstOrDefault(x=> string.Compare(ex, x,false, CultureInfo.InvariantCulture) == 0)!=null)
             {
                 return true;
@@ -303,7 +303,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             image.Write(Path.Combine(thpath, $"{imginfo.Id}.jpg"));
         }
 
-        private bool CouldFileTypeShowInWeb(string ext, MagickImage image)
+        private static bool CouldFileTypeShowInWeb(string _, MagickImage image)
         {
             if (image.Format==MagickFormat.Jpeg)
             {
@@ -458,7 +458,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
             _dbConnection.Update(imginfo);
         }
 
-        private long? ParseDatetime(string strExifDateTime)
+        private static long? ParseDatetime(string strExifDateTime)
         {
             string format = "yyyy:MM:dd HH:mm:ss";
             try
