@@ -1,0 +1,110 @@
+
+/* responsive css*/
+
+@media (min-width:992px) and (max-width:1199px) {
+.single_abouts_img img{
+	width:100%;
+}
+
+
+	
+	
+	
+}
+
+/* Tabe Screen Media */
+
+@media (min-width: 769px) and (max-width: 991px){
+
+.single_banner img{
+	width:100%;
+}
+.single_banner_text {
+    margin-top: 20%;
+}	
+.banner{
+	background-size:cover;
+}	
+.apps_downlod a{
+	display:inline-block;
+	width:48%;
+}
+
+.single_abouts_img img{
+	width:100%;
+}
+img{
+	max-width:100%;
+}
+.single_works_text_middel{
+	margin-top:10%;
+}
+.single_works_deatels {
+    margin-top: 10%;
+}
+
+
+
+.main_joine_content .main_joinus a {
+    width: 22%;
+}
+
+.footer_menu ul li a {
+    padding: 5px 3px;
+}
+	
+	
+}
+
+/* Mobile Phone Screen Media */
+
+@media (max-width: 768px){
+	
+.banner{
+	background-size:cover;
+}
+
+.single_banner_text {
+    margin-top: 15%;
+}
+	
+.single_abouts_img img{
+	width:100%;
+}	
+img{
+	max-width:100%;
+}	
+
+.main_joine_content .main_joinus a {
+    width: 30%;
+    display: block;
+    margin: 20px auto;
+}
+
+.single_footer {
+	text-align:center;
+}
+.single_footer .form-control {
+	width:45%;
+	display:inline-block;
+}
+.single_footer .submit_btn{
+    font-size: 14px;
+	
+}
+.navbar-form {
+    -webkit-box-shadow: none;
+    box-shadow:none;
+	margin:0;
+	padding:0;
+}
+.footer .single_footer p {
+    padding-left:0px;
+}
+
+
+
+	
+	
+	
+}
