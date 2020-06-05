@@ -42,10 +42,10 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
 
         
         //lower case
-        static string[] IgnoredExtensions = { ".MP3", ".WMA", ".PDF", ".TXT", ".DLL", ".EXE", ".INI", ".INF",
+        static readonly string[] IgnoredExtensions = { ".MP3", ".WMA", ".PDF", ".TXT", ".DLL", ".EXE", ".INI", ".INF",
             ".ISO", ".ZIP", ".RAR", ".7Z", ".RTF", ".DOC", ".DOCX", ".LRC" , ".HTML" , ".HTM", ".CSV", ".DS_STORE",
             ".SRT", ".DB" , ".JS" , ".CSS",".PLASSET" };
-        static string[] VideoExtensions = { ".MOV", ".AVI", ".MP4", ".FLV", ".MKV", ".ASF", ".WMV", ".RMVB",
+        static readonly string[] VideoExtensions = { ".MOV", ".AVI", ".MP4", ".FLV", ".MKV", ".ASF", ".WMV", ".RMVB",
             ".RM", ".SWF",".MPG",".MPEG", ".VOB"};
         public ImgIndexer(string dbfolder)
         {
@@ -114,6 +114,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 {
                     return ;
                 }
+                //Console.WriteLine("Process {0}", p);
 
                 var imginfo = _dbConnection.Table<ImageInfo>().FirstOrDefault(x => x.Path == p);
                 if (imginfo == null)
@@ -203,8 +204,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                     UpdateSizeFromThumbnail(imginfo, des);
                 }
             }
-            catch
+            catch(Exception e)
             {
+                Console.WriteLine("Exception in GenerateVideoThumbnail {0} {1}", e.Message, e.StackTrace);
             }
         }
 
