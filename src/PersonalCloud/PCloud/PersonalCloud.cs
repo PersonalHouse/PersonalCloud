@@ -236,6 +236,11 @@ namespace NSPersonalCloud
                 var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
                 var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
                 var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
+                var lis = cfg.Apps.Where(x => x.NodeId != ninfo.NodeGuid).ToList();
+                foreach (var item in lis)
+                {
+                    cfg.Apps.Remove(item);
+                }
                 return cfg;
             }
             catch (Exception e)
