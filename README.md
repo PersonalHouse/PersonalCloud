@@ -16,7 +16,7 @@ One device could join a personal cloud with/without a shared folder. Folders fro
 
 ## For Developer
 See the following chart
-![Architecture](https://raw.githubusercontent.com/Personal-Cloud/PersonalCloud/master/Docs/Desc.png "Architecture")
+![Architecture](https://github.com/Personal-Cloud/PersonalCloud/raw/master/docs/Desc.png "Architecture")
 
 
 ## License
