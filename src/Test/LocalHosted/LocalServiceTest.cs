@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using EmbedIO;
 using NSPersonalCloud.Apps.Album;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace LocalHosted
 {
@@ -104,14 +105,13 @@ namespace LocalHosted
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
                         var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
 
-
-                        await srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
+                        var strcfig = JsonConvert.SerializeObject(new List<AlbumConfig>() {
                             new AlbumConfig {
                                 MediaFolder= @"F:\pics",
                                 Name="test",
                                 ThumbnailFolder=@"D:\Projects\out"
-                            }
-                        }).ConfigureAwait(false);
+                            } });
+                        await srv1.SetAppMgrConfig("Album", pc1.Id, strcfig).ConfigureAwait(false);
 
                         Assert.AreEqual(pc1.Apps?.Count, 1);
 
@@ -167,13 +167,15 @@ namespace LocalHosted
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
                         var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
 
-                        await srv1.SetAlbumConfig(pc1.Id, new List<AlbumConfig>() {
+
+                        var strcfig = JsonConvert.SerializeObject(new List<AlbumConfig>() {
                             new AlbumConfig {
                                 MediaFolder= @"F:\pics",
                                 Name="test",
                                 ThumbnailFolder=@"D:\Projects\out"
-                            }
-                        }).ConfigureAwait(false);
+                            } });
+                        await srv1.SetAppMgrConfig("Album", pc1.Id, strcfig).ConfigureAwait(false);
+
 
                         Assert.AreEqual(pc1.Apps?.Count, 1);
 
@@ -277,7 +279,7 @@ namespace LocalHosted
                 pcs[0] = srv[0].CreatePersonalCloud("test", "test0").Result;
                 var ret = srv[0].SharePersonalCloud(pcs[0]).Result;
                 l.LogInformation("srv0 is sharing");
-                Thread.Sleep(3000);
+                Thread.Sleep(10000);
 
                 Parallel.For(1, count,new ParallelOptions { MaxDegreeOfParallelism=2},
                     i => {

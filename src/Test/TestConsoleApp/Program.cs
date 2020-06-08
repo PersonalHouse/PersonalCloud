@@ -4,7 +4,6 @@ using System.IO;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using NSPersonalCloud;
-using NSPersonalCloud.Apps.Album;
 
 namespace TestConsoleApp
 {
@@ -114,15 +113,7 @@ namespace TestConsoleApp
             pcservice.StartService();
             pc = pcservice.CreatePersonalCloud("test", "test1").Result;
 
-            pcservice.SetAlbumConfig(pc.Id, new System.Collections.Generic.List<AlbumConfig>() { new AlbumConfig {MediaFolder= @"F:\pics",
-            Name="test",ThumbnailFolder=@"D:\Projects\out"
-            } });
 
-            if (pc.Apps?.Count!=1)
-            {
-                Console.WriteLine($"Install app failed. exit");
-                return;
-            }
             var ret = pcservice.SharePersonalCloud(pc).Result;
 
 

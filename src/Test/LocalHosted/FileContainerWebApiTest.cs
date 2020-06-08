@@ -41,7 +41,7 @@ namespace LocalHosted
         [OneTimeSetUp]
         public void Setup()
         {
-            TestRoot = Path.Combine(GetFolderPath(SpecialFolder.MyDocuments), "Personal Cloud");
+            var logdir  = TestRoot = Path.Combine(GetFolderPath(SpecialFolder.MyDocuments), "Personal Cloud");
             Directory.CreateDirectory(TestRoot);
             TestRoot = Path.Combine(TestRoot, "Test Container");
             if (Directory.Exists(TestRoot))
@@ -54,8 +54,7 @@ namespace LocalHosted
 
             Directory.CreateDirectory(TestRoot);
 
-            var logsDir = Path.Combine(TestRoot, "Logs");
-            Directory.CreateDirectory(logsDir);
+            Directory.CreateDirectory(logdir);
 
             Loggers = LoggerFactory.Create(builder => builder.//SetMinimumLevel(LogLevel.Trace).
             AddConsole(x => {

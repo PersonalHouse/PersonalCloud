@@ -212,19 +212,37 @@ namespace NSPersonalCloud
                 throw new UnauthorizedAccessException("Cannot access a folder that is not shared.");
             }
 
+
             if (isDirectory )
             {
                 throw new InvalidOperationException("The path does not point to a file.");
             }
-            if (info.Exists)
-            {
-                //throw new InvalidOperationException("The file already exists.");
-            }
 
             var fileInfo = (FileInfo) info;
             Directory.CreateDirectory(fileInfo.DirectoryName);
-            using var target = fileInfo.Create();
-            await fileContent.CopyToAsync(target).ConfigureAwait(false);
+
+            if (info.Exists)
+            {
+                try
+                {
+                    if (fileContent.Length == fileContent.Position)
+                    {
+                        return;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                using var target = fileInfo.OpenWrite();
+                await fileContent.CopyToAsync(target).ConfigureAwait(false);
+                //throw new InvalidOperationException("The file already exists.");
+            }
+            else
+            {
+                using var target = fileInfo.Create();
+                await fileContent.CopyToAsync(target).ConfigureAwait(false);
+            }
+
         }
 
         public virtual async ValueTask WritePartialFileAsync(string relativePath, long offset, long length, Stream partialContent, CancellationToken cancellation = default)

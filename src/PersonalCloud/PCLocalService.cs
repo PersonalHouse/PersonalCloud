@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Runtime.Loader;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -541,28 +542,65 @@ namespace NSPersonalCloud
         List<IAppManager> AppMgrs;
         List<IAppManager> GetAppMgrs()
         {
-            if (AppMgrs == null)
+            try
             {
-                AppMgrs = new List<IAppManager> { new Apps.Album.AlbumManager() };
-            }
-            return AppMgrs;
-        }
-        public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
-        {
-            return SetAppMgrConfig("Album", pcid, JsonConvert.SerializeObject(albcongs));
-        }
+                if (AppMgrs == null)
+                {
 
-        public List<Apps.Album.AlbumConfig> GetAlbumConfig(string pcid)
+                    var mgrs = new List<IAppManager> {  };
+
+                    var curpath = Path.GetDirectoryName(typeof(PCLocalService).Assembly.Location);
+                    var pathapps = Directory.GetDirectories(Path.Combine(curpath, Definition.AppsFolder));
+                    foreach (var item in pathapps)
+                    {
+                        var assemblyPath = Path.Combine(item, Definition.AppDllName);
+                        if (!File.Exists(assemblyPath))
+                        {
+                            continue;
+                        }
+                        var appAssembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+                        foreach (var ti in appAssembly.DefinedTypes)
+                        {
+                            if (ti.ImplementedInterfaces.Contains(typeof(IAppManager)))
+                            {
+                                var m = (IAppManager) Activator.CreateInstance(ti);
+                                mgrs.Add(m);
+                            }
+                        }
+                    }
+
+
+                    AppMgrs = mgrs;
+                }
+                return AppMgrs;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "GetAppMgrs");
+                return new List<IAppManager>();
+            }
+        }
+//         public Task SetAlbumConfig(string pcid, List<Apps.Album.AlbumConfig> albcongs)
+//         {
+//             return SetAppMgrConfig("Album", pcid, JsonConvert.SerializeObject(albcongs));
+//         }
+
+//         public List<Apps.Album.AlbumConfig> GetAlbumConfig(string pcid)
+//         {
+// 
+//             var json = GetAppConfig(pcid,"Album");
+//             if (json != null)
+//             {
+//                 return JsonConvert.DeserializeObject<List<Apps.Album.AlbumConfig>>(json);
+//             }
+//             return new List<Apps.Album.AlbumConfig>();
+//         }
+        public string GetAppConfig(string pcid,string appid)
         {
             var lis = GetAppMgrs();
-
-            var s = ConfigStorage.GetApp("Album");
+            var s = ConfigStorage.GetApp(appid);
             var (pcidloc, json) = s.FirstOrDefault(x => x.Item1 == pcid);
-            if (json != null)
-            {
-                return JsonConvert.DeserializeObject<List<Apps.Album.AlbumConfig>>(json);
-            }
-            return new List<Apps.Album.AlbumConfig>();
+            return json;
         }
 
         public Task SetAppMgrConfig(string appid, string pcid, string jsonconfig)

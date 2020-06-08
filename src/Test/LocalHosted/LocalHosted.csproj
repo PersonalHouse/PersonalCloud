@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Apps\Album\AlbumComon\AlbumComon.csproj" />
     <ProjectReference Include="..\..\PersonalCloud\PersonalCloud.csproj" />
   </ItemGroup>
 

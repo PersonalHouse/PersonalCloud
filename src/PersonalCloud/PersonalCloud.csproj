@@ -16,8 +16,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Apps\Album\AlbumApp\AlbumApp.csproj" />
-    <ProjectReference Include="..\Apps\Album\AlbumComon\AlbumComon.csproj" />
     <ProjectReference Include="..\Interface\Interface.csproj" />
     <ProjectReference Include="..\StorageClient.Aliyun\src\StorageClient.Aliyun\StorageClient.Aliyun.csproj" />
     <ProjectReference Include="..\StorageClient.Azure\src\StorageClient.Azure\StorageClient.Azure.csproj" />
@@ -36,8 +34,19 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.4" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="Standart.Hash.xxHash" Version="3.1.0" />
+    <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="System.Text.Json" Version="4.7.2" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.11.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Apps\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Apps\empty.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   

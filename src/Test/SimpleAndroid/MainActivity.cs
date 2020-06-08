@@ -112,7 +112,7 @@ namespace SimpleAndroid
                     using var fs = new FileStream(Path.Combine(dic, "content.txt"), FileMode.Open);
                     try
                     {
-                        pc.RootFS.DeleteAsync("/test1/tex.txt").GetAwaiter().GetResult();
+                        pc.RootFS.DeleteAsync("/test1/tex.txt").AsTask().Wait();
                     }
                     catch (System.Exception e)
                     {

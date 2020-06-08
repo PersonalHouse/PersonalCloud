@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>NSPersonalCloud.Apps.Album</RootNamespace>
+    <AssemblyName>AppMgr</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

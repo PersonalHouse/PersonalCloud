@@ -29,10 +29,4 @@
     <ProjectReference Include="..\AlbumComon\AlbumComon.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="ffmpeg.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

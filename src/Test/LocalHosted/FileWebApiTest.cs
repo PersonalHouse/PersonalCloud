@@ -136,9 +136,11 @@ namespace LocalHosted
             using var fileStream = new MemoryStream(source);
             await Client.WriteFileAsync("test.txt", fileStream).ConfigureAwait(false);
 
+            using var fileStream2 = new MemoryStream(source);
+            await Client.WriteFileAsync("test.txt", fileStream2).ConfigureAwait(false);
+
             using var empty = new MemoryStream(0);
-            // Attempt to overwrite existing file.
-            Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync("test.txt", fileStream).AsTask());
+
             // Attempt to create file with illegal name.
             Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync(@"test\", fileStream).AsTask());
             // Attempt to create folder of the same name.
@@ -153,7 +155,7 @@ namespace LocalHosted
 
             // Attempt to overwrite existing folder.
             Assert.ThrowsAsync<HttpRequestException>(() => Client.CreateDirectoryAsync("Sample").AsTask());
-            using var empty = new MemoryStream(0);
+            using var empty = new MemoryStream(new byte[1]);
             // Attempt to create file of the same name.
             Assert.ThrowsAsync<HttpRequestException>(() => Client.WriteFileAsync("Sample", empty).AsTask());
         }
