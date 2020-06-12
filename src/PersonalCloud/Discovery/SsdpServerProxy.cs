@@ -102,7 +102,7 @@ namespace NSPersonalCloud
                             }
                             if (!endPoint.Address.Equals( address))
                             {
-                                logger.LogInformation($"Search request from {endPoint}, local address is: {address}");
+                                logger.LogDebug($"Search request from {endPoint}, local address is: {address}");
                             }
                             SendSearchResponse(ts, endPoint);
                         }
@@ -117,7 +117,7 @@ namespace NSPersonalCloud
                             }
                             if ((opstr == NetworkPacketOperations.Response)&&(endPoint.Address != address))
                             {
-                                logger.LogInformation($"Search response from {endPoint}, local address is: {address}");
+                                logger.LogDebug($"Search response from {endPoint}, local address is: {address}");
                             }
                             var strcontent = sr.ReadLine();
                             ResponseReceived?.Invoke(this, strcontent);
