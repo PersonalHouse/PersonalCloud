@@ -265,7 +265,7 @@ namespace NSPersonalCloud.FileSharing
             }
             using var request = CreateRequest(HttpMethod.Post, "/api/share/file", ("Path", path));
             request.Headers.Add(AuthDefinitions.HttpFileLength, (fileStream.Length + 8).ToString(CultureInfo.InvariantCulture));
-            using var strm = new HashReadStream(fileStream, true, 0, RequestTimeoutInMs, false);
+            using var strm = new HashReadStream(fileStream, true, length, RequestTimeoutInMs, false);
             request.Content = new StreamContent(strm);
             request.Headers.Range = new RangeHeaderValue(position, position + length - 1 + 8);//+crc64
 
