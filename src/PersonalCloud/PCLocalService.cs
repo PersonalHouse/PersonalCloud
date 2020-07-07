@@ -605,44 +605,52 @@ namespace NSPersonalCloud
 
         public Task SetAppMgrConfig(string appid, string pcid, string jsonconfig)
         {
-            var lis = GetAppMgrs();
-            var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
-            if (appmgr != null)
+            try
             {
-                var updatenet = false;
-                List<AppLauncher> appls = null;
-                try
+                var lis = GetAppMgrs();
+                var appmgr = lis.FirstOrDefault(x => x.GetAppId() == appid);
+                if (appmgr != null)
                 {
-                    appls = appmgr.Config(jsonconfig);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError(e, $"Config error for {appmgr.GetAppId()}");
-                    return Task.CompletedTask;
-                }
-                ConfigStorage.SaveApp(appid, pcid, jsonconfig);
-                foreach (var appl in appls)
-                {
-                    PersonalCloud pc = null;
-                    lock (_PersonalClouds)
+                    var updatenet = false;
+                    List<AppLauncher> appls = null;
+                    try
                     {
-                        pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcid);
+                        appls = appmgr.Config(jsonconfig);
                     }
-                    if (pc != null)
+                    catch (Exception e)
                     {
-                        appl.NodeId = NodeId;
-                        appl.AppId = appid;
-                        pc.AddApp(appl);
-                        updatenet = true;
+                        logger.LogError(e, $"Config error for {appmgr.GetAppId()}");
+                        return Task.CompletedTask;
+                    }
+                    ConfigStorage.SaveApp(appid, pcid, jsonconfig);
+                    foreach (var appl in appls)
+                    {
+                        PersonalCloud pc = null;
+                        lock (_PersonalClouds)
+                        {
+                            pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcid);
+                        }
+                        if (pc != null)
+                        {
+                            appl.NodeId = NodeId;
+                            appl.AppId = appid;
+                            pc.AddApp(appl);
+                            updatenet = true;
+                        }
+                    }
+                    if (updatenet)
+                    {
+                        this.NetworkRefeshNodes();
                     }
                 }
-                if (updatenet)
-                {
-                    this.NetworkRefeshNodes();
-                }
-            }
 
-            return Task.CompletedTask;
+                return Task.CompletedTask;
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "SetAppMgrConfig");
+                throw;
+            }
         }
         /// <summary>
         /// install apps. may be called multiple times
