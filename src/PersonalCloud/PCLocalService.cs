@@ -52,7 +52,7 @@ namespace NSPersonalCloud
         readonly ILogger logger;
 
         private IConfigStorage ConfigStorage { get; }
-        private VirtualFileSystem FileSystem { get; }
+        private Zio.IFileSystem FileSystem;
         string ExtraWebPath;
 
         NodeDiscovery nodeDiscovery;
@@ -82,7 +82,7 @@ namespace NSPersonalCloud
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
         public ShareController CreateShareController() => new ShareController(FileSystem, this);
 
-        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, VirtualFileSystem fileSystem, string extraWebPath)
+        public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, Zio.IFileSystem fileSystem, string extraWebPath)
         {
             ExtraWebPath = extraWebPath;
 
@@ -930,6 +930,8 @@ namespace NSPersonalCloud
                 nodeDiscovery = null;
                 httpclient?.Dispose();
                 httpclient = null;
+                FileSystem?.Dispose();
+                FileSystem = null;
             }
         }
 

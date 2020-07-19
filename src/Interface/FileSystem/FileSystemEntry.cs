@@ -9,11 +9,6 @@ namespace NSPersonalCloud.Interfaces.FileSystem
     public class FileSystemEntry
     {
         /// <summary>
-        /// Unique ID to identify this resource on target device. This ID must not change during application lifetime.
-        /// </summary>
-        public string Id { get; set; }
-
-        /// <summary>
         /// The name of this resource, including its extension.
         /// </summary>
         public string Name { get; set; }
@@ -101,6 +96,25 @@ namespace NSPersonalCloud.Interfaces.FileSystem
             CreationDate = entry.CreationTimeUtc;
             ModificationDate = entry.LastWriteTimeUtc;
             Attributes = entry.Attributes;
+        }
+
+        public FileSystemEntry(Zio.FileSystemEntry file)
+        {
+            if (file is null) throw new ArgumentNullException(nameof(file));
+
+            Name = file.Name;
+            CreationDate = file.CreationTime.ToUniversalTime();
+            ModificationDate = file.LastWriteTime.ToUniversalTime();
+            Attributes = file.Attributes;
+
+            if (file.Attributes.HasFlag(FileAttributes.Directory))
+            {
+            }
+            else
+            {
+                var p = file.FileSystem.ConvertPathToInternal(file.FullName);
+                Size = (new FileInfo(p)).Length;
+            }
         }
 
         /// <summary>

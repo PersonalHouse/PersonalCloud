@@ -145,15 +145,22 @@ namespace NSPersonalCloud.FileSharing
             return JsonConvert.DeserializeObject<List<FileSystemEntry>>(json);
         }
 
-        public async ValueTask<FreeSpaceInformation> GetFreeSpaceAsync(CancellationToken cancellation = default)
+        public ValueTask<FreeSpaceInformation> GetFreeSpaceAsync(CancellationToken cancellation = default)
         {
-            using var request = CreateRequest(HttpMethod.Get, "/api/share/volume/freespace");
 
-            using var response = await SendRequest(request, cancellation).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
-
-            var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            return (json != null) ? JsonConvert.DeserializeObject<FreeSpaceInformation>(json) : null;
+            return new ValueTask<FreeSpaceInformation>(new FreeSpaceInformation {
+                FreeBytesAvailable = 2L * 1024 * 1024 * 1024 * 1024,
+                TotalNumberOfBytes = 1L * 1024 * 1024 * 1024 * 1024,
+                TotalNumberOfFreeBytes = 2L * 1024 * 1024 * 1024 * 1024,
+            });
+             
+            //             using var request = CreateRequest(HttpMethod.Get, "/api/share/volume/freespace");
+            // 
+            //             using var response = await SendRequest(request, cancellation).ConfigureAwait(false);
+            //             response.EnsureSuccessStatusCode();
+            // 
+            //             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            //             return (json != null) ? JsonConvert.DeserializeObject<FreeSpaceInformation>(json) : null;
         }
 
         /// <summary>
@@ -360,13 +367,13 @@ namespace NSPersonalCloud.FileSharing
         /// [Route(HttpVerbs.Delete, "/file")]
         /// </summary>
         /// <param name="path">[QueryField("Path", true)]</param>
-        public async ValueTask DeleteAsync(string path, bool safeDelete = false, CancellationToken cancellation = default)
+        public async ValueTask DeleteAsync(string path, bool _ = false, CancellationToken cancellation = default)
         {
             if (string.IsNullOrEmpty(path)) throw new ArgumentNullException(nameof(path));
 
             var collection = HttpUtility.ParseQueryString(string.Empty);
             collection.Add("Path", path);
-            if (safeDelete) collection.Add("Safe", "1");
+            collection.Add("Safe", "1");
 
             var builder = new UriBuilder(hostUri) {
                 Query = collection.ToString()

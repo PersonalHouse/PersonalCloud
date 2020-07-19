@@ -17,6 +17,8 @@ using Microsoft.Extensions.Logging;
 using NSPersonalCloud;
 using NSPersonalCloud.Apps.Album;
 
+using Zio.FileSystems;
+
 namespace SimpleAndroid
 {
     [Activity(Label = "@string/app_name", Theme = "@style/AppTheme.NoActionBar", MainLauncher = true)]
@@ -90,7 +92,9 @@ namespace SimpleAndroid
                     var t1 = new SimpleConfigStorage(
                         Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.MyDocuments),
                         "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
-                    var pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath), dic);
+                    var fs = new PhysicalFileSystem();
+                    var subfs = new SubFileSystem(fs, fs.ConvertPathFromInternal(t1.RootPath),true);
+                    var pcservice = new PCLocalService(t1, loggerFactory, subfs, dic);
                     Directory.CreateDirectory(dic);
                     pcservice.InstallApps().Wait();
 

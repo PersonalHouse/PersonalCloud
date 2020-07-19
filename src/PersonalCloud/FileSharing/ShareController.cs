@@ -17,18 +17,20 @@ using NSPersonalCloud.FileSharing;
 using NSPersonalCloud.Interfaces.Errors;
 using NSPersonalCloud.Interfaces.FileSystem;
 
+using Zio;
+
 namespace NSPersonalCloud
 {
 #pragma warning disable CA1031
 
     public partial class ShareController : WebApiController
     {
-        private readonly IFileSystem fileSystem;
+        private readonly Zio.IFileSystem fileSystem;
         IPCService pCService;
-        public ShareController(IFileSystem vfs, IPCService pcService)
+        public ShareController(Zio.IFileSystem fs, IPCService pcService)
         {
             pCService = pcService;
-            fileSystem = vfs;
+            fileSystem = fs;
         }
 
         #region Utility
@@ -50,8 +52,8 @@ namespace NSPersonalCloud
         {
             try
             {
-                var children = await fileSystem.EnumerateChildrenAsync(path).ConfigureAwait(false);
-                SendJsonResponse(children);
+                var children = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute()).ToList();
+                SendJsonResponse(children.Select(x => new Interfaces.FileSystem.FileSystemEntry(x)));
             }
             catch (NotSupportedException)
             {
@@ -77,8 +79,9 @@ namespace NSPersonalCloud
             {
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                _ = e.Message;
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -89,8 +92,8 @@ namespace NSPersonalCloud
             try
             {
                 var data = await HttpContext.GetRequestDataAsync<EnumerateChildrenRequest>().ConfigureAwait(false);
-                var children = await fileSystem.EnumerateChildrenAsync(path, data.SearchPattern, data.PageSize, data.PageIndex).ConfigureAwait(false);
-                SendJsonResponse(children);
+                var children = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute(), data.SearchPattern);
+                SendJsonResponse(children.Select(x => new Interfaces.FileSystem.FileSystemEntry(x)).Skip(data.PageIndex).Take(data.PageSize));
             }
             catch (InvalidOperationException)
             {
@@ -123,8 +126,8 @@ namespace NSPersonalCloud
         {
             try
             {
-                var nodeInfo = await fileSystem.ReadMetadataAsync(path).ConfigureAwait(false);
-                SendJsonResponse(nodeInfo);
+                var nodeInfo = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute());
+                SendJsonResponse(new Interfaces.FileSystem.FileSystemEntry(nodeInfo.FirstOrDefault()));
             }
             catch (InvalidOperationException)
             {
@@ -163,11 +166,12 @@ namespace NSPersonalCloud
         {
             try
             {
-                var info = await fileSystem.GetFreeSpaceAsync().ConfigureAwait(false);
-                if (info != null)
-                {
-                    SendJsonResponse(info);
-                }
+                var info = new FreeSpaceInformation {
+                    FreeBytesAvailable = 2L * 1024 * 1024 * 1024 * 1024,
+                    TotalNumberOfBytes = 1L * 1024 * 1024 * 1024 * 1024,
+                    TotalNumberOfFreeBytes = 2L * 1024 * 1024 * 1024 * 1024,
+                };
+                SendJsonResponse(info);
             }
             catch (InvalidOperationException)
             {
@@ -200,7 +204,7 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.CreateDirectoryAsync(path).ConfigureAwait(false);
+                fileSystem.CreateDirectory((new UPath(path)).ToAbsolute());
             }
             catch (InvalidOperationException)
             {
@@ -227,7 +231,7 @@ namespace NSPersonalCloud
             while (bytes > 0 &&
                    (read = await input.ReadAsync(buffer, 0, (int) Math.Min((long) buffer.Length, bytes)).ConfigureAwait(false)) > 0)
             {
-                output.Write(buffer, 0, read);
+                await output.WriteAsync(buffer, 0, read).ConfigureAwait(false);
                 bytes -= read;
             }
         }
@@ -244,8 +248,10 @@ namespace NSPersonalCloud
                     var from = long.Parse(rangeArray[0], NumberStyles.None, CultureInfo.InvariantCulture);
                     var to = long.Parse(rangeArray[1], NumberStyles.None, CultureInfo.InvariantCulture);
 
+                    using var strmfile = fileSystem.OpenFile((new UPath(path)).ToAbsolute(), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    strmfile.Seek(from, SeekOrigin.Begin);
+
                     var len = to - from + 1;
-                    using var source = await fileSystem.ReadPartialFileAsync(path, from, to).ConfigureAwait(false);
                     HttpContext.Response.Headers.Add(AuthDefinitions.HttpFileLength, (len + 8).ToString(CultureInfo.InvariantCulture));
 
 #pragma warning disable CA1308 // Extension map is lowercase keyed.
@@ -255,9 +261,8 @@ namespace NSPersonalCloud
                     using var target = HttpContext.OpenResponseStream(false, false);
                     using var strm = new HashWriteStream(target, len);
 
-                    await CopyStreamAsync(source, strm, len).ConfigureAwait(false);
+                    await CopyStreamAsync(strmfile, strm, len).ConfigureAwait(false);
                     //await source.CopyToAsync(strm).ConfigureAwait(false);
-                    strm.Dispose();
                 }
                 catch (InvalidOperationException e)
                 {
@@ -289,7 +294,7 @@ namespace NSPersonalCloud
             {
                 try
                 {
-                    using var source = await fileSystem.ReadFileAsync(path).ConfigureAwait(false);
+                    using var source = fileSystem.OpenFile((new UPath(path)).ToAbsolute(), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
                     HttpContext.Response.Headers.Add(AuthDefinitions.HttpFileLength, (source.Length + 8).ToString(CultureInfo.InvariantCulture));
 
 #pragma warning disable CA1308 // Extension map is lowercase keyed.
@@ -300,7 +305,6 @@ namespace NSPersonalCloud
                     using var strm = new HashWriteStream(target, source.Length);
 
                     await source.CopyToAsync(strm).ConfigureAwait(false);
-                    strm.Dispose();
                 }
                 catch (InvalidOperationException e)
                 {
@@ -340,7 +344,14 @@ namespace NSPersonalCloud
                 var len = long.Parse(HttpContext.Request.Headers[AuthDefinitions.HttpFileLength], CultureInfo.InvariantCulture);
                 using var stream = new HashReadStream(origstream, false, len);
 
-                await fileSystem.WriteFileAsync(path, stream).ConfigureAwait(false);
+                var p = (new UPath(path)).ToAbsolute();
+                var dir = p.GetDirectory();
+                if (!fileSystem.DirectoryExists(dir))
+                {
+                    fileSystem.CreateDirectory(dir);
+                }
+                using var source = fileSystem.OpenFile(p, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
+                await stream.CopyToAsync(source).ConfigureAwait(false);
             }
             catch (InvalidOperationException e)
             {
@@ -367,13 +378,9 @@ namespace NSPersonalCloud
         {
             if (HttpContext.Request.Headers["Range"] is string range)
             {
+                //bool isexpend = false;
                 try
                 {
-                    //                     if (!File.Exists(path))
-                    //                     {
-                    //                         await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
-                    //                         return;
-                    //                     }
                     range = range.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries)[1];
                     var rangeArray = range.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
                     var from = long.Parse(rangeArray[0], NumberStyles.None, CultureInfo.InvariantCulture);
@@ -384,7 +391,13 @@ namespace NSPersonalCloud
 
                     using var stream = new HashReadStream(origstream, false, len);
 
-                    await fileSystem.WritePartialFileAsync(path, from, to - from + 1, stream).ConfigureAwait(false);
+                    using var dest = fileSystem.OpenFile((new UPath(path)).ToAbsolute(), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+                    //                     if (from==(dest.Length-1))
+                    //                     {
+                    //                         isexpend = true;
+                    //                     }
+                    dest.Seek(from, SeekOrigin.Begin);
+                    await CopyStreamAsync(stream, dest, to - from + 1).ConfigureAwait(false);
                 }
                 catch (InvalidOperationException)
                 {
@@ -407,8 +420,7 @@ namespace NSPersonalCloud
             }
             else
             {
-                // TODO: For Test
-                await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
+                await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
         }
 
@@ -417,7 +429,8 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.SetFileLengthAsync(path, length).ConfigureAwait(false);
+                using var dest = fileSystem.OpenFile((new UPath(path)).ToAbsolute(), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+                dest.SetLength(length);
             }
             catch (InvalidOperationException)
             {
@@ -450,7 +463,7 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.SetFileAttributesAsync(path, (FileAttributes) attributes).ConfigureAwait(false);
+                fileSystem.SetAttributes((new UPath(path)).ToAbsolute(), (FileAttributes) attributes);
             }
             catch (InvalidOperationException)
             {
@@ -486,7 +499,18 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.SetFileTimeAsync(path, creation, access, write).ConfigureAwait(false);
+                if (creation != null)
+                {
+                    fileSystem.SetCreationTime((new UPath(path)).ToAbsolute(), creation.Value);
+                }
+                if (access != null)
+                {
+                    fileSystem.SetLastAccessTime((new UPath(path)).ToAbsolute(), access.Value);
+                }
+                if (write != null)
+                {
+                    fileSystem.SetLastWriteTime((new UPath(path)).ToAbsolute(), write.Value);
+                }
             }
             catch (InvalidOperationException)
             {
@@ -519,7 +543,15 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.RenameAsync(path, newName).ConfigureAwait(false);
+                var fe = fileSystem.GetAttributes((new UPath(path)).ToAbsolute());
+                if (fe.HasFlag(FileAttributes.Directory))
+                {
+                    fileSystem.MoveDirectory((new UPath(path)).ToAbsolute(), (new UPath(newName)).ToAbsolute() );
+                }
+                else
+                {
+                    fileSystem.MoveFile((new UPath(path)).ToAbsolute(), (new UPath(newName)).ToAbsolute() );
+                }
             }
             catch (InvalidOperationException)
             {
@@ -548,11 +580,11 @@ namespace NSPersonalCloud
         }
 
         [Route(HttpVerbs.Delete, "/file")]
-        public async Task DeleteFile([QueryField("Path", true)] string path, [QueryField("Safe", false)] int safeDelete)
+        public async Task DeleteFile([QueryField("Path", true)] string path)
         {
             try
             {
-                await fileSystem.DeleteAsync(path, safeDelete == 1).ConfigureAwait(false);
+                fileSystem.DeleteFile((new UPath(path)).ToAbsolute());
             }
             catch (InvalidOperationException)
             {
@@ -581,7 +613,10 @@ namespace NSPersonalCloud
         {
             try
             {
-                await fileSystem.DeleteAsync(path).ConfigureAwait(false);
+                if (fileSystem.DirectoryExists((new UPath(path)).ToAbsolute()))
+                {
+                    fileSystem.DeleteDirectory((new UPath(path)).ToAbsolute(), true);
+                }
             }
             catch (InvalidOperationException)
             {

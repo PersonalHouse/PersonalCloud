@@ -9,6 +9,8 @@ using NSPersonalCloud.FileSharing;
 using NUnit.Framework;
 using NUnit.Framework.Interfaces;
 
+using Zio.FileSystems;
+
 namespace LocalHosted
 {
 
@@ -86,7 +88,12 @@ namespace LocalHosted
             }
             Directory.CreateDirectory(testRoot);
 
-            using var server = new HttpProvider(100, new VirtualFileSystem(testRoot));
+#pragma warning disable CA2000 // Dispose objects before losing scope
+            var fs = new PhysicalFileSystem();
+#pragma warning restore CA2000 // Dispose objects before losing scope
+            var subfs = new SubFileSystem(fs, fs.ConvertPathFromInternal(testRoot), true);
+
+            using var server = new HttpProvider(100, subfs);
             server.Start();
 
             using var client = new TopFolderClient($"http://localhost:100", new byte[32], "");

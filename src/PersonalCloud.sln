@@ -27,8 +27,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AlbumApp", "Apps\Album\Albu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StorageClient.Azure", "StorageClient.Azure\src\StorageClient.Azure\StorageClient.Azure.csproj", "{1EF72EEA-0917-43F0-A664-CC97B8ED238F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleAndroid", "Test\SimpleAndroid\SimpleAndroid.csproj", "{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,12 +69,6 @@ Global
 		{1EF72EEA-0917-43F0-A664-CC97B8ED238F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1EF72EEA-0917-43F0-A664-CC97B8ED238F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1EF72EEA-0917-43F0-A664-CC97B8ED238F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -88,7 +80,6 @@ Global
 		{6B328268-E108-42CA-8862-A6CF230F283D} = {E8487EA2-2010-43A0-8DC4-80BDA488943B}
 		{BB7DBF8B-D5D9-4AD1-BAA6-CFE32DDEDC35} = {6B328268-E108-42CA-8862-A6CF230F283D}
 		{0F3B4B96-0151-4089-8173-D541635E6926} = {6B328268-E108-42CA-8862-A6CF230F283D}
-		{D03F77ED-DF15-4D8F-893E-2A1BF0A74EAE} = {46D29715-66F0-4AEB-8F32-EACF5B20E58F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8203F760-34E2-4EDE-834A-63DBEF4AB20A}

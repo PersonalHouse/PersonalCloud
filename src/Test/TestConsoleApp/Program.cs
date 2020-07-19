@@ -5,6 +5,8 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using NSPersonalCloud;
 
+using Zio.FileSystems;
+
 namespace TestConsoleApp
 {
     class Program
@@ -86,7 +88,11 @@ namespace TestConsoleApp
             var t2 = new SimpleConfigStorage(
                 Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), 
                 "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
-            pcservice = new PCLocalService(t2, loggerFactory, new VirtualFileSystem(t2.RootPath),null);
+
+            var fs = new PhysicalFileSystem();
+            var subfs = new SubFileSystem(fs, fs.ConvertPathFromInternal(t2.RootPath), true);
+
+            pcservice = new PCLocalService(t2, loggerFactory, subfs, null);
             //pcservice.SetUdpPort(2330, new[] { 2330 });
             pcservice.StartService();
 
@@ -106,7 +112,11 @@ namespace TestConsoleApp
             var t1 = new SimpleConfigStorage(
                 Path.Combine(System.Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                 "TestConsoleApp", Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture)));
-            pcservice = new PCLocalService(t1, loggerFactory, new VirtualFileSystem(t1.RootPath),dic);
+
+            var fs = new PhysicalFileSystem();
+            var subfs = new SubFileSystem(fs, fs.ConvertPathFromInternal(t1.RootPath), true);
+
+            pcservice = new PCLocalService(t1, loggerFactory, subfs, dic);
             Directory.CreateDirectory(dic);
             pcservice.InstallApps().Wait();
 

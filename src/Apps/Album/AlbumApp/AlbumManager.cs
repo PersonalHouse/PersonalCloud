@@ -18,13 +18,11 @@ using NSPersonalCloud.Interfaces.Apps;
 
 namespace NSPersonalCloud.Apps.Album
 {
+#pragma warning disable CA1001 // Types that own disposable fields should be disposable
     public class AlbumManager : IAppManager
+#pragma warning restore CA1001 // Types that own disposable fields should be disposable
     {
-        private static readonly Dictionary<string, AlbumConfig> Cache;
-        static AlbumManager()
-        {
-            Cache = new Dictionary<string, AlbumConfig>();
-        }
+        private static readonly Dictionary<string, AlbumConfig> Cache = new Dictionary<string, AlbumConfig>();
         private static Task IndexerTask;
         CancellationTokenSource cts;
 
@@ -51,7 +49,7 @@ namespace NSPersonalCloud.Apps.Album
                 new System.Text.Json.JsonSerializerOptions() { IgnoreNullValues = true })).ConfigureAwait(false);
         }
 
-        EmbedIO.WebServer IAppManager.ConfigWebController(string id, string path, EmbedIO.WebServer webServer)
+        public EmbedIO.WebServer ConfigWebController(string id, string path, EmbedIO.WebServer webServer)
         {
             return webServer.WithWebApi(id, path, EmbedIOResponseSerializerCallback,
                 module => module.WithController(() => new AlbumWebController(GetFromCache)));
@@ -77,7 +75,7 @@ namespace NSPersonalCloud.Apps.Album
         /// <param name="assembly">The assembly.</param>
         /// <param name="resourceName">Name of the resource.</param>
         /// <param name="fileName">Name of the file.</param>
-        public static void ExtractResource(Assembly assembly, string filename, string path = null)
+        static void ExtractResource(Assembly assembly, string filename, string path = null)
         {
             //Construct the full path name for the output file
             var outputFile = path ?? $@"{Directory.GetCurrentDirectory()}\{filename}";
@@ -95,7 +93,7 @@ namespace NSPersonalCloud.Apps.Album
             }
         }
 
-        Task IAppManager.InstallWebStatiFiles(string path)
+        public Task InstallWebStatiFiles(string path)
         {
             try
             {
@@ -146,7 +144,7 @@ namespace NSPersonalCloud.Apps.Album
                 throw;
             }
         }
-        async Task IndexOneAlbum(string exepath, string src,string des,  CancellationToken tk)
+        static async Task IndexOneAlbum(string exepath, string src,string des,  CancellationToken tk)
         {
             var si = new ProcessStartInfo(exepath,$" -O \"{des}\" -I \"{src}\" ");
             using var proc = new Process();
