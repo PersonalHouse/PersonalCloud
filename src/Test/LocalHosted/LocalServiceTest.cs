@@ -25,6 +25,7 @@ namespace LocalHosted
 #pragma warning disable CA2000 // Dispose objects before losing scope
             var fs = new PhysicalFileSystem();
 #pragma warning restore CA2000 // Dispose objects before losing scope
+            fs.CreateDirectory(fs.ConvertPathFromInternal(path));
             return new SubFileSystem(fs, fs.ConvertPathFromInternal(path), true);   
         }
 

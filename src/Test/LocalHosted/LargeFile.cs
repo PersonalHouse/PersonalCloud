@@ -74,7 +74,7 @@ namespace LocalHosted
         [Test]
         public async Task LargeFileTest()
         {
-            long filesize = 1L*1024 *  1024 * 1024;
+            long filesize = 10L*1024 *  1024 * 1024;
             var testRoot = "I:\\Personal Cloud Test\\";
             int parts = 128;
             var partsize = filesize / parts;
