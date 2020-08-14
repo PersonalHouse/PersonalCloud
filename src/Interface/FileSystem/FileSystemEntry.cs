@@ -112,8 +112,7 @@ namespace NSPersonalCloud.Interfaces.FileSystem
             }
             else
             {
-                var p = file.FileSystem.ConvertPathToInternal(file.FullName);
-                Size = (new FileInfo(p)).Length;
+                Size = file.FileSystem.GetFileLength(file.FullName);
             }
         }
 
