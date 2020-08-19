@@ -252,6 +252,7 @@ namespace NSPersonalCloud.RootFS
 
             if (ClientList == null) throw new NoDeviceResponseException();
 
+            var isFolder = path.EndsWith(Path.AltDirectorySeparatorChar);
             var segments = SplitPath(path);
             if (segments.Length > 0)
             {
@@ -267,6 +268,7 @@ namespace NSPersonalCloud.RootFS
                 {
                     var deviceRelativePath = string.Join(Path.AltDirectorySeparatorChar, segments.TakeLast(segments.Length - 1));
                     deviceRelativePath = Path.AltDirectorySeparatorChar + deviceRelativePath;
+                    if (isFolder) deviceRelativePath += Path.AltDirectorySeparatorChar;
                     return device.DeleteAsync(deviceRelativePath, safeDelete, cancellation);
                 }
                 else throw new DeviceNotFoundException();
