@@ -52,7 +52,7 @@ namespace NSPersonalCloud
         readonly ILogger logger;
 
         private IConfigStorage ConfigStorage { get; }
-        private Zio.IFileSystem FileSystem;
+        public Zio.IFileSystem FileSystem { get; set; }
         string ExtraWebPath;
 
         NodeDiscovery nodeDiscovery;
