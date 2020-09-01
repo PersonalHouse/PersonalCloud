@@ -176,18 +176,20 @@ namespace NSPersonalCloud
                 {
                     case SocketAsyncOperation.ReceiveFrom:
 
+                        var ctx = (SocketRecvContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
                             if (e.SocketError!= SocketError.OperationAborted)
                             {
                                 logger.LogError($"Socket Receive error: {e.SocketError}.");
-
                             }
+                            var err = e.SocketError;
+                            StoreSocketAsyncEventArgs(e);
+                            ctx?.ErrorCallback?.Invoke(err);
                             return;
                         }
                         
                         Task.Run(async () => {
-                            var ctx = (SocketRecvContext) e.UserToken;
                             var remotep = e.RemoteEndPoint as IPEndPoint;
                             //logger.LogTrace($"ReceiveFrom  {remotep.Port} local port {ctx.So.LocalEndPoint}");
 
