@@ -175,11 +175,12 @@ namespace NSPersonalCloud
                 switch (e.LastOperation)
                 {
                     case SocketAsyncOperation.ReceiveFrom:
+                    {
 
                         var ctx = (SocketRecvContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
-                            if (e.SocketError!= SocketError.OperationAborted)
+                            if (e.SocketError != SocketError.OperationAborted)
                             {
                                 logger.LogError($"Socket Receive error: {e.SocketError}.");
                             }
@@ -188,7 +189,7 @@ namespace NSPersonalCloud
                             ctx?.ErrorCallback?.Invoke(err);
                             return;
                         }
-                        
+
                         Task.Run(async () => {
                             var remotep = e.RemoteEndPoint as IPEndPoint;
                             //logger.LogTrace($"ReceiveFrom  {remotep.Port} local port {ctx.So.LocalEndPoint}");
@@ -199,13 +200,15 @@ namespace NSPersonalCloud
                                 ReceivMore(ctx, e);
                             }
                         });
+                    }
 
-                        break;
+                    break;
                     case SocketAsyncOperation.SendTo:
+                    {
                         var ctx = (SocketSendContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
-                           logger.LogError($"Socket Send error {e.SocketError}. From {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}.");
+                            logger.LogError($"Socket Send error {e.SocketError}. From {ctx.So.LocalEndPoint} to {e.RemoteEndPoint}.");
                         }
                         if (ctx != null)
                         {
@@ -219,13 +222,15 @@ namespace NSPersonalCloud
                                 e.SetBuffer(ctx.Data, ctx.Offset, ctx.Count);
                                 ctx.So.SendToAsync(e);
                             });
-                        }else
+                        }
+                        else
                         {
                             var err = e.SocketError;
                             StoreSocketAsyncEventArgs(e);
                             ctx.ErrorCallback?.Invoke(err);
                         }
-                        break;
+                    }
+                    break;
                     case SocketAsyncOperation.Disconnect:
                         break;
                     default:
