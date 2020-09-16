@@ -180,10 +180,11 @@ namespace NSPersonalCloud
                         var ctx = (SocketRecvContext) e.UserToken;
                         if (e.SocketError != SocketError.Success)
                         {
-                            if (e.SocketError != SocketError.OperationAborted)
+                            if (e.SocketError == SocketError.OperationAborted)
                             {
-                                logger.LogError($"Socket Receive error: {e.SocketError}.");
+                                return;
                             }
+                            logger.LogError($"Socket Receive error: {e.SocketError}.");
                             var err = e.SocketError;
                             StoreSocketAsyncEventArgs(e);
                             ctx?.ErrorCallback?.Invoke(err);
