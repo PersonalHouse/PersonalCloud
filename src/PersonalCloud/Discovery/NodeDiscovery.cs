@@ -62,8 +62,17 @@ namespace NSPersonalCloud
 
             State = NodeDiscoveryState.Created;
             TimeStamp = DateTime.UtcNow.ToFileTime();
+
+            NetworkChange.NetworkAddressChanged += new
+            NetworkAddressChangedEventHandler(AddressChangedCallback);
         }
 
+        private void AddressChangedCallback(object sender, EventArgs e)
+        {
+            StopNetwork();
+            StartMonitoring();
+            StartSearch();
+        }
 
         void FillProxies(List<Tuple<IPAddress, int>>  ips)
         {

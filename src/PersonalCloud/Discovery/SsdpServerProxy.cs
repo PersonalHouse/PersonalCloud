@@ -73,8 +73,8 @@ namespace NSPersonalCloud
 
         void BeginListeningForBroadcasts()
         {
-            udpMulticastServer.Listen(sendsocket, SocketListernCallback, OnSendError);//OnSendError has not be used yet
-            udpMulticastServer.Listen(listensocket, SocketListernCallback, OnSendError);
+            udpMulticastServer.Listen(sendsocket, SocketListernCallback, OnListenError);
+            udpMulticastServer.Listen(listensocket, SocketListernCallback, OnListenError);
         }
 
         private Task<bool> SocketListernCallback(byte[] buffer, int datasize, IPEndPoint endPoint)
@@ -293,6 +293,19 @@ namespace NSPersonalCloud
         }
 
         private void OnSendError(SocketError obj)
+        {
+            try
+            {
+                if (!disposedValue)
+                {
+                    ReInitSocket();
+                }
+            }
+            catch
+            {
+            }
+        }
+        private void OnListenError(SocketError obj)
         {
             try
             {
