@@ -19,7 +19,7 @@ namespace NSPersonalCloud.FileSharing
 {
     public class TopFolderClient : IFileSystem, IDisposable
     {
-        public const int RequestTimeoutInMs = 15 * 1000;//10s
+        public const int RequestTimeoutInMs = 30 * 1000;//30s
         public string NodeId { get; set; }
         public string Name { get; set; }
         public long TimeStamp { get; set; }
@@ -138,9 +138,13 @@ namespace NSPersonalCloud.FileSharing
             using var stringContent = new StringContent(req, Encoding.UTF8, "application/json");
             request.Content = stringContent;
 
-            using var response = await SendRequest(request, cancellation).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            using var cts = new CancellationTokenSource(60*1000);
+            using var cts2 = cancellation==default?null: CancellationTokenSource.CreateLinkedTokenSource(cancellation, cts.Token);
+            var tok = cancellation == default ? cts.Token : cts2.Token;
 
+            using var response = await SendRequest(request, tok).ConfigureAwait(false);
+
+            response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<List<FileSystemEntry>>(json);
         }
