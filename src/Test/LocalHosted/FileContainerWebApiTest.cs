@@ -282,5 +282,29 @@ namespace LocalHosted
             Task.WaitAll(clients.ToArray());
         }
 
+
+        [Test, Order(10)]
+        public async Task CreateFileZeroLength()
+        {
+            using var fileStream = new MemoryStream();
+            await Client.WriteFileAsync("Files/test.txt", fileStream).ConfigureAwait(false);
+
+            var rs = await Client.ReadFileAsync("Files/test.txt").ConfigureAwait(false);
+            Assert.AreEqual(rs.Length, 0);
+            var buf = new byte[1024];
+            var ret = rs.Read(new Span<byte>(buf));
+            Assert.AreEqual(ret, 0);
+        }
+        [Test, Order(11)]
+        public async Task SetFileTime()
+        {
+            using var fileStream = new MemoryStream();
+            await Client.WriteFileAsync("Files/test.txt", fileStream).ConfigureAwait(false);
+            var dt = new DateTime(2000, 1, 1).ToUniversalTime();
+            await Client.SetFileTimeAsync("Files/test.txt", dt, dt, dt).ConfigureAwait(false);
+            var fi = await Client.ReadMetadataAsync("Files/test.txt").ConfigureAwait(false);
+            Assert.AreEqual(fi.CreationDate, dt);
+            Assert.AreEqual(fi.ModificationDate, dt);
+        }
     }
 }
