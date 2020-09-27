@@ -333,5 +333,16 @@ namespace LocalHosted
             var ret = rs.Read(new Span<byte>(buf));
             Assert.AreEqual(ret, 0);
         }
+        [Test, Order(13)]
+        public async Task SetFileTime()
+        {
+            using var fileStream = new MemoryStream();
+            await Client.WriteFileAsync("test.txt", fileStream).ConfigureAwait(false);
+            var dt = new DateTime(2000, 1, 1).ToUniversalTime();
+            await Client.SetFileTimeAsync("test.txt", dt, dt, dt).ConfigureAwait(false);
+            var fi = await Client.ReadMetadataAsync("test.txt").ConfigureAwait(false);
+            Assert.AreEqual(fi.CreationDate, dt);
+            Assert.AreEqual(fi.ModificationDate, dt);
+        }
     }
 }

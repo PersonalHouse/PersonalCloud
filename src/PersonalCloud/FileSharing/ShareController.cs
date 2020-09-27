@@ -126,8 +126,9 @@ namespace NSPersonalCloud
         {
             try
             {
-                var nodeInfo = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute());
-                SendJsonResponse(new Interfaces.FileSystem.FileSystemEntry(nodeInfo.FirstOrDefault()));
+                var fn = (new UPath(path)).ToAbsolute();
+                var nodeInfo = fileSystem.GetFileSystemEntry(fn);
+                SendJsonResponse(new Interfaces.FileSystem.FileSystemEntry(nodeInfo));
             }
             catch (InvalidOperationException)
             {
