@@ -65,7 +65,7 @@ namespace NSPersonalCloud.FileSharing
                     return Task.FromResult(Auth.NoUser);
                 }
 
-                var url = context.Request.Url.ToString().ToUpperInvariant();
+                var url = context.Request.Url.AbsoluteUri.ToUpperInvariant();
 
                 //if (authver == 1)
                 {

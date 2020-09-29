@@ -84,7 +84,7 @@ namespace NSPersonalCloud.FileSharing
             request.Headers.Add(AuthDefinitions.AuthenticationVersion, AuthDefinitions.CurAuthVersion.ToString(CultureInfo.InvariantCulture));
             request.Headers.Add(AuthDefinitions.AuthenticationTimeStamp, ts.ToString(CultureInfo.InvariantCulture));
             request.Headers.Add(AuthDefinitions.AuthenticationPCId, PcId);
-            var hash = EmbedIOAuthentication.V1Auth(ts, request.RequestUri.ToString().ToUpperInvariant(), Key);
+            var hash = EmbedIOAuthentication.V1Auth(ts, request.RequestUri.AbsoluteUri.ToUpperInvariant(), Key);
             request.Headers.Add(AuthDefinitions.AuthenticationHash, hash.Value.ToString(CultureInfo.InvariantCulture));
 
             if (!AddTimeout)
@@ -418,7 +418,7 @@ namespace NSPersonalCloud.FileSharing
             request.Headers.Add(AuthDefinitions.AuthenticationVersion, AuthDefinitions.CurAuthVersion.ToString(CultureInfo.InvariantCulture));
             request.Headers.Add(AuthDefinitions.AuthenticationTimeStamp, ts.ToString(CultureInfo.InvariantCulture));
             request.Headers.Add(AuthDefinitions.AuthenticationPCId, pcid);
-            var hash = EmbedIOAuthentication.V1Auth(ts, request.RequestUri.ToString().ToUpperInvariant(), masterkey);
+            var hash = EmbedIOAuthentication.V1Auth(ts, request.RequestUri.AbsoluteUri.ToUpperInvariant(), masterkey);
             request.Headers.Add(AuthDefinitions.AuthenticationHash, hash.Value.ToString(CultureInfo.InvariantCulture));
 
             HttpResponseMessage response = null;
