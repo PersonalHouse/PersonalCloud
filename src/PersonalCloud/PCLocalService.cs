@@ -633,6 +633,10 @@ namespace NSPersonalCloud
                         pc.CleanApps();
                         foreach (var appl in appls)
                         {
+                            if (appl==null)
+                            {
+                                continue;
+                            }
                             appl.NodeId = NodeId;
                             appl.AppId = appid;
                             pc.AddApp(appl);

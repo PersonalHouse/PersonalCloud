@@ -76,8 +76,7 @@ namespace NSPersonalCloud.FileSharing
                         };
                     }
                     catch (Exception)
-                    {
-                        
+                    {                        
                         throw;
                     }
                 }).ToList());
