@@ -188,7 +188,10 @@ namespace NSPersonalCloud.FileSharing
             using var request = CreateRequest(HttpMethod.Get, "/api/share/metadata", ("Path", path));
 
             using var response = await SendRequest(request, cancellation).ConfigureAwait(false);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new FileNotFoundException($"TopFolderClient.ReadMetadataAsync {path}");
+            }
 
             var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             return JsonConvert.DeserializeObject<FileSystemEntry>(json);

@@ -80,6 +80,13 @@ namespace NSPersonalCloud
             }
             UpdateTimeStamp = DateTime.UtcNow.ToFileTime();
         }
+        internal void CleanApps()
+        {
+            lock (Apps)
+            {
+                Apps.Clear();
+            }
+        }
 
         public Uri GetWebAppUri(AppLauncher launcher)
         {

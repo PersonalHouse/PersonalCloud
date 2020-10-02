@@ -6,8 +6,12 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Microsoft.Extensions.Logging;
+
 using NSPersonalCloud.Interfaces.Apps;
 using NSPersonalCloud.Interfaces.FileSystem;
+
 
 namespace NSPersonalCloud.FileSharing
 {
@@ -15,7 +19,12 @@ namespace NSPersonalCloud.FileSharing
     {
         public Func<List<AppLauncher>> GetApps { get; set; }
         public Func<AppLauncher, string> GetUrl { get; set; }
+        ILogger _logger;
 
+        public AppInFs(ILogger logger)
+        {
+            _logger = logger;
+        }
 
         static string[] GetFolderSegments(string path)
         {
@@ -48,12 +57,29 @@ namespace NSPersonalCloud.FileSharing
 
             return new ValueTask<List<FileSystemEntry>>(
                 apps.Select(x => {
-                    using var s = GetContent(x);
-                    return new FileSystemEntry() { Name = $"{x.Name}.html",
-                        Size = s.Length,
-                        ModificationDate = DateTime.Now,
-                        Attributes=FileAttributes.Normal,
-                    };
+                    try
+                    {
+                        if (x==null)
+                        {
+                            _logger.LogError("AppInFs.EnumerateChildrenAsync:x is null");
+                        }
+                        using var s = GetContent(x);
+                        if (s == null)
+                        {
+                            _logger.LogError("AppInFs.EnumerateChildrenAsync:s is null");
+                        }
+                        return new FileSystemEntry() {
+                            Name = $"{x.Name}.html",
+                            Size = s.Length,
+                            ModificationDate = DateTime.Now,
+                            Attributes = FileAttributes.Normal,
+                        };
+                    }
+                    catch (Exception)
+                    {
+                        
+                        throw;
+                    }
                 }).ToList());
         }
 
@@ -84,30 +110,39 @@ namespace NSPersonalCloud.FileSharing
 
         Stream GetContent(AppLauncher app, int start=-1, int count=-1)
         {
-            var url = GetUrl?.Invoke(app);
-            string s = null;
-            if (url==null)
+            try
             {
-                s= "<!DOCTYPE html><html lang=\"en\"><body>There is a problem. Please update Personal Cloud to the most recently version. </body></html> ";
-            }else
-            {
-                s = "<!DOCTYPE html><html lang=\"en\"><body><noscript>You need to enable JavaScript to run this app.</noscript><script>" +
-                    $"location.href = \'{url}\' </script></body></html>";
+                var url = GetUrl?.Invoke(app);
+                string s = null;
+                if (url == null)
+                {
+                    s = "<!DOCTYPE html><html lang=\"en\"><body>There is a problem. Please update Personal Cloud to the most recently version. </body></html> ";
+                }
+                else
+                {
+                    s = "<!DOCTYPE html><html lang=\"en\"><body><noscript>You need to enable JavaScript to run this app.</noscript><script>" +
+                        $"location.href = \'{url}\' </script></body></html>";
+                }
+                var b = Encoding.UTF8.GetBytes(s);
+                if (start == -1)
+                {
+                    return new MemoryStream(b);
+                }
+                if (start >= b.Length)
+                {
+                    return Stream.Null;
+                }
+                if ((count + start) > b.Length)
+                {
+                    count = b.Length - start;
+                }
+                return new MemoryStream(Encoding.UTF8.GetBytes(s), start, count);
             }
-            var b = Encoding.UTF8.GetBytes(s);
-            if (start == -1)
+            catch (Exception e)
             {
-                return new MemoryStream(b);
+                _logger.LogError("Exception in GetContent", e);
+                return null;
             }
-            if (start>=b.Length)
-            {
-                return Stream.Null;
-            }
-            if ((count+ start) > b.Length)
-            {
-                count = b.Length - start;
-            }
-            return new MemoryStream(Encoding.UTF8.GetBytes(s), start, count);
         }
 
         public ValueTask<FileSystemEntry> ReadMetadataAsync(string path, CancellationToken cancellation = default)
@@ -123,14 +158,14 @@ namespace NSPersonalCloud.FileSharing
             }
             if (ps?.Length !=1 )
             {
-                throw new NotSupportedException($"ReadMetadataAsync is not supported on {path}.");
+                throw new FileNotFoundException($"ReadMetadataAsync is not supported on {path}.");
             }
             var appname = Path.GetFileNameWithoutExtension(ps[0]);
             var apps = GetApps();
             var al = apps.FirstOrDefault(x => string.Compare(x.Name, appname, true, CultureInfo.InvariantCulture) == 0);
             if (al==null)
             {
-                throw new NotSupportedException($"ReadMetadataAsync couldn't find path {path}.");
+                throw new FileNotFoundException($"ReadMetadataAsync couldn't find path {path}.");
             }
             using var ac = GetContent(al);
 

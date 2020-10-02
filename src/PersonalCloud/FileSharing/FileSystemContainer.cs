@@ -234,9 +234,13 @@ namespace NSPersonalCloud.FileSharing
                     return fs.ReadMetadataAsync(subpath, cancellation);
                 }
             }
+            catch(FileNotFoundException e)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                logger.LogError(e, $"ReadMetadataAsync {path}");
+                logger.LogError(e, $"FileSystemContainer.ReadMetadataAsync {path}");
                 throw;
             }
         }

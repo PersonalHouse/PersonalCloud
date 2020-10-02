@@ -623,14 +623,15 @@ namespace NSPersonalCloud
                         return Task.CompletedTask;
                     }
                     ConfigStorage.SaveApp(appid, pcid, jsonconfig);
-                    foreach (var appl in appls)
+                    PersonalCloud pc = null;
+                    lock (_PersonalClouds)
                     {
-                        PersonalCloud pc = null;
-                        lock (_PersonalClouds)
-                        {
-                            pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcid);
-                        }
-                        if (pc != null)
+                        pc = _PersonalClouds.FirstOrDefault(x => x.Id == pcid);
+                    }
+                    if (pc != null)
+                    {
+                        pc.CleanApps();
+                        foreach (var appl in appls)
                         {
                             appl.NodeId = NodeId;
                             appl.AppId = appid;

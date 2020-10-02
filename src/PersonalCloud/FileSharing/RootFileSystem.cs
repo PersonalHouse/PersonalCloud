@@ -118,10 +118,10 @@ namespace NSPersonalCloud.RootFS
                     deviceRelativePath = Path.AltDirectorySeparatorChar + deviceRelativePath;
                     return device.ReadMetadataAsync(deviceRelativePath, cancellation);
                 }
-                else throw new DeviceNotFoundException();
+                else throw new FileNotFoundException();
             }
 
-            throw new InvalidOperationException();
+            throw new FileNotFoundException();
         }
 
         public ValueTask<Stream> ReadFileAsync(string path, CancellationToken cancellation = default)
