@@ -116,7 +116,6 @@ namespace NSPersonalCloud
             fetchCloudInfo = new ActionBlock<NodeInfo>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 3 });
             InitWebServer();
 
-
         }
 
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
@@ -162,6 +161,58 @@ namespace NSPersonalCloud
 
         #region Node discovery
 
+        private void AddToKnownNodes(NodeInfo node)
+        {
+            lock (KnownNodes)
+            {
+                if (KnownNodes.ContainsKey(node.NodeGuid))
+                {
+                    KnownNodes[node.NodeGuid] = node;
+                }
+                else
+                {
+                    KnownNodes.Add(node.NodeGuid, node);
+                }
+            }
+        }
+
+        private async Task<HttpResponseMessage> GetNodeWebResp(Uri turi)
+        {
+            const int retrycnt = 2;//Too many retries may block the queue.
+            for (int i = 0; i < retrycnt; i++)
+            {
+                try
+                {
+                    return await httpclient.GetAsync(turi).ConfigureAwait(false);
+                }
+                catch (Exception)
+                {
+                    if (i < (retrycnt - 1))
+                    {
+                        await Task.Delay(100).ConfigureAwait(false);
+                    }
+                }
+
+            }
+            return null;
+        }
+
+        private bool IsKnownNodeAndUpdateTS(NodeInfo node)
+        {
+            lock (KnownNodes)
+            {
+                if (KnownNodes.TryGetValue(node.NodeGuid, out var lnode))
+                {
+                    if (lnode.TimeStamp >= node.TimeStamp)
+                    {
+                        lnode.LastSeenTime = DateTime.UtcNow.ToFileTime();
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         async Task GetNodeClodeInfo(NodeInfo _)
         {
             NodeInfo node = null;
@@ -179,34 +230,18 @@ namespace NSPersonalCloud
                     curnodeinfo.IsFetching = true;
                 }
 
-                lock (KnownNodes)
+                if(IsKnownNodeAndUpdateTS(node))
                 {
-                    if (KnownNodes.TryGetValue(node.NodeGuid, out var lnode))
-                    {
-                        if (lnode.TimeStamp >= node.TimeStamp)
-                        {
-                            lnode.LastSeenTime = DateTime.UtcNow.ToFileTime();
-                            return;
-                        }
-                    }
+                    return;
                 }
+
                 var turi = new Uri(new Uri(node.Url), "clouds");
-                var req = await httpclient.GetAsync(turi).ConfigureAwait(false);
-                if (req.IsSuccessStatusCode)
+                var resp = await GetNodeWebResp(turi).ConfigureAwait(false);
+                if ((resp != null) && resp.IsSuccessStatusCode)
                 {
                     logger.LogTrace($"Discovered {turi}");
-                    await OnNewNodeDiscovered(node, req).ConfigureAwait(false);
-                    lock (KnownNodes)
-                    {
-                        if (KnownNodes.ContainsKey(node.NodeGuid))
-                        {
-                            KnownNodes[node.NodeGuid] = node;
-                        }
-                        else
-                        {
-                            KnownNodes.Add(node.NodeGuid, node);
-                        }
-                    }
+                    await OnNewNodeDiscovered(node, resp).ConfigureAwait(false);
+                    AddToKnownNodes(node);
                 }
                 else
                 {
@@ -311,11 +346,11 @@ namespace NSPersonalCloud
             try
             {
                 nodeinfo.LastSeenTime = DateTime.UtcNow.ToFileTime();
-                //logger.LogDebug($"NodeDiscovery_OnNodeAdded {ServerPort}: {nodeinfo.Url} {nodeinfo.TimeStamp}");
+                logger.LogTrace($"NodeDiscovery_OnNodeAdded {ServerPort}: {nodeinfo.Url} {nodeinfo.TimeStamp}");
                 lock (fetchQueue)
                 {
-                    if (fetchQueue.FirstOrDefault(x =>
-                    (x.Node.NodeGuid == nodeinfo.NodeGuid) && (x.Node.Url == nodeinfo.Url) && (x.Node.TimeStamp >= nodeinfo.TimeStamp)) != null)
+                    if (fetchQueue.Exists(x => (x.Node.NodeGuid == nodeinfo.NodeGuid)
+                    && (x.Node.Url == nodeinfo.Url) && (x.Node.TimeStamp >= nodeinfo.TimeStamp)))
                     {
                         return;
                     }
@@ -356,6 +391,8 @@ namespace NSPersonalCloud
                 {
                     foreach (var item in lis)
                     {
+                        var ts = new TimeSpan(DateTime.UtcNow.ToFileTime() - item.Value.LastSeenTime);
+                        logger.LogTrace($"Removing expired node info {item.Value.NodeGuid}, {ts.TotalSeconds}");
                         await pc.OnNodeUpdate(item.Value, ssdp).ConfigureAwait(false);
                     }
                 }

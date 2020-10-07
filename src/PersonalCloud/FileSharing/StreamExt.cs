@@ -17,7 +17,7 @@ namespace NSPersonalCloud.FileSharing
             var bra = new int[2];
             var ta = new Task[2];
 
-            bra[0] = await input.ReadAsync(ba[0], 0, (int) Math.Min((long) buflen, bytes)).ConfigureAwait(false);
+            bra[0] = await input.ReadAsync(ba[0].AsMemory(0, (int) Math.Min((long) buflen, bytes)), cancellationToken).ConfigureAwait(false);
             bytes -= bra[0];
             if (bra[0]>0)
             {
@@ -37,7 +37,7 @@ namespace NSPersonalCloud.FileSharing
                     bytes -= bra[(i + 1) % 2];
                     ++i;
                 }
-                await output.WriteAsync(ba[i % 2], 0, bra[i % 2], cancellationToken).ConfigureAwait(false);
+                await output.WriteAsync(ba[i % 2].AsMemory(0, bra[i % 2]), cancellationToken).ConfigureAwait(false);
             }
             return;
         }
@@ -50,7 +50,7 @@ namespace NSPersonalCloud.FileSharing
             var bra = new int[2];
             var ta = new Task[2];
 
-            bra[0] = await input.ReadAsync(ba[0], 0, (int) Math.Min((long) buflen, bytes)).ConfigureAwait(false);
+            bra[0] = await input.ReadAsync(ba[0].AsMemory(0, (int) Math.Min((long) buflen, bytes))).ConfigureAwait(false);
             bytes -= bra[0];
             if (bra[0] > 0)
             {
@@ -69,7 +69,7 @@ namespace NSPersonalCloud.FileSharing
                     bytes -= bra[(i + 1) % 2];
                     ++i;
                 }
-                await output.WriteAsync(ba[i % 2], 0, bra[i % 2]).ConfigureAwait(false);
+                await output.WriteAsync(ba[i % 2].AsMemory(0, bra[i % 2])).ConfigureAwait(false);
             }
             return;
 

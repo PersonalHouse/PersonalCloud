@@ -65,8 +65,16 @@ namespace NSPersonalCloud
         //utc
         public long UpdateTimeStamp { get; set; }
 
-        internal List<NodeInfoForPC> CachedNodes { get; }//node guid,url
+        List<NodeInfoForPC> CachedNodes;//node guid,url. must be used with lock
         internal List<StorageProviderInstance> StorageProviderInstances { get; }
+
+        NodeInfoForPC GetNodeById(string nodeId)
+        {
+            lock (CachedNodes)
+            {
+                return CachedNodes.FirstOrDefault(x => x.NodeGuid == nodeId);
+            }
+        }
 
         #region Apps
 
@@ -92,8 +100,12 @@ namespace NSPersonalCloud
         {
             if (launcher is null) throw new ArgumentNullException(nameof(launcher));
 
-            var node = CachedNodes.FirstOrDefault(x => x.NodeGuid == launcher.NodeId);
-            if (node is null) return null;
+            NodeInfoForPC node= GetNodeById(launcher.NodeId);
+            if (node is null)
+            {
+                logger.LogError($"Couldn't find {launcher.NodeId}. Cached nodes is {CachedNodes.Count}");
+                return null;
+            }
 
             var nu = node.Url[node.Url.Length - 1] == '/' ? node.Url.Substring(0, node.Url.Length - 1) : node.Url;
             return new Uri($"{nu}{launcher.WebAddress}?AccKey={launcher.AccessKey}");
@@ -278,6 +290,7 @@ namespace NSPersonalCloud
                     {
                         if (info.PCTimeStamp < ssdpin.TimeStamp)
                         {
+                            logger.LogTrace($"Removing node {info.Name} {info.NodeGuid}");
                             CachedNodes.Remove(info);
                         }
                         else
@@ -292,6 +305,7 @@ namespace NSPersonalCloud
                         Url = ninfo.Url,
                         Name = name
                     };
+                    logger.LogTrace($"Adding node {newinf.Name} {newinf.NodeGuid}");
                     CachedNodes.Add(newinf);
                     OnCachedNodesChange();
                     updated = true;
@@ -305,6 +319,7 @@ namespace NSPersonalCloud
                     }
                     if (nremoved > 0)
                     {
+                        logger.LogTrace($"Removing node {ninfo.NodeGuid} {ninfo.NodeGuid} all");
                         OnCachedNodesChange();
                         deleted = true;
                     }
@@ -367,11 +382,7 @@ namespace NSPersonalCloud
                     {
                         foreach (var ai in pci.Apps)
                         {
-                            NodeInfoForPC n = null;
-                            lock (CachedNodes)
-                            {
-                                n = CachedNodes.FirstOrDefault(x => x.NodeGuid == ai.NodeId);
-                            }
+                            NodeInfoForPC n = GetNodeById(ai.NodeId);
                             if (n == null)
                             {
                                 return;
@@ -522,67 +533,64 @@ namespace NSPersonalCloud
 
         void OnCachedNodesChange()
         {
+            NodeInfoForPC[] nodes;
             lock (CachedNodes)
             {
-                NodeInfoForPC[] nodes;
                 nodes = CachedNodes.ToArray();
-                foreach (var node in nodes)
-                {
-                    var cur = RootFS.ClientList.FirstOrDefault(x => {//find by node id
-                        if (x.Value is TopFolderClient tpc)
-                        {
-                            if (tpc.NodeId == node.NodeGuid)
-                            {
-                                return true;
-                            }
-                        }
-                        return false;
-                    });
-                    if (cur.Key == null)//not found
-                    {
-                        InsertRootFS(node);
-
-                    }
-                    else
-                    {
-                        if (cur.Value is TopFolderClient tpc)
-                        {
-                            if (tpc.TimeStamp >= node.PCTimeStamp)
-                            {
-                                continue;
-                            }
-                            var origname = tpc.Name;
-                            tpc.hostUri = new Uri(node.Url);
-                            tpc.Name = node.Name;
-                            tpc.NodeId = node.NodeGuid;
-                            tpc.TimeStamp = node.PCTimeStamp;
-                            if (origname != node.Name)
-                            {
-                                InsertRootFS(node, tpc);
-                                RootFS.ClientList.TryRemove(origname, out _);
-                            }
-                            else
-                            {// do nothing
-
-                            }
-                        }
-                    }
-                }
-
-                var lis = RootFS.ClientList.Where(x => {
+            }
+            foreach (var node in nodes)
+            {
+                var cur = RootFS.ClientList.FirstOrDefault(x => {//find by node id
                     if (x.Value is TopFolderClient tpc)
                     {
-                        lock (CachedNodes)
+                        if (tpc.NodeId == node.NodeGuid)
                         {
-                            return CachedNodes.FirstOrDefault(y => y.NodeGuid == tpc.NodeId) == null;
+                            return true;
                         }
                     }
                     return false;
-                }).ToList();
-                foreach (var item in lis)
+                });
+                if (cur.Key == null)//not found
                 {
-                    RootFS.ClientList.TryRemove(item.Key, out _);
+                    InsertRootFS(node);
+
                 }
+                else
+                {
+                    if (cur.Value is TopFolderClient tpc)
+                    {
+                        if (tpc.TimeStamp >= node.PCTimeStamp)
+                        {
+                            continue;
+                        }
+                        var origname = tpc.Name;
+                        tpc.hostUri = new Uri(node.Url);
+                        tpc.Name = node.Name;
+                        tpc.NodeId = node.NodeGuid;
+                        tpc.TimeStamp = node.PCTimeStamp;
+                        if (origname != node.Name)
+                        {
+                            InsertRootFS(node, tpc);
+                            RootFS.ClientList.TryRemove(origname, out _);
+                        }
+                        else
+                        {// do nothing
+
+                        }
+                    }
+                }
+            }
+
+            var lis = RootFS.ClientList.Where(x => {
+                if (x.Value is TopFolderClient tpc)
+                {
+                    return GetNodeById(tpc.NodeId) == null;
+                }
+                return false;
+            }).ToList();
+            foreach (var item in lis)
+            {
+                RootFS.ClientList.TryRemove(item.Key, out _);
             }
         }
 

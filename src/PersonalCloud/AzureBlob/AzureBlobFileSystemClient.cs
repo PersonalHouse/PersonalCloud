@@ -38,7 +38,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
                 filePath += "/";
             }
             var client = _ClientBuilder.GetBlobContainerClient(_ContainerName);
-            var pages = client.GetBlobsByHierarchyAsync(prefix: filePath, delimiter: "/").AsPages().ConfigureAwait(false);
+            var pages = client.GetBlobsByHierarchyAsync(prefix: filePath, delimiter: "/", cancellationToken: cancellation).AsPages().ConfigureAwait(false);
             var files = new List<FileSystemEntry>();
             await foreach (var page in pages)
             {
@@ -112,7 +112,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             {
                 try
                 {
-                    fileMetadata = client.GetBlobClient(filePath).GetProperties();
+                    fileMetadata = client.GetBlobClient(filePath).GetProperties(cancellationToken: cancellation);
                     return new ValueTask<FileSystemEntry>(new FileSystemEntry {
                         Attributes = FileAttributes.Normal,
                         ModificationDate = fileMetadata.LastModified.DateTime,
@@ -175,7 +175,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
         {
             fileName = fileName?.Replace('\\', '/').Trim('/');
             var client = _ClientBuilder.GetBlobContainerClient(_ContainerName);
-            return new ValueTask<Stream>(client.GetBlobClient(fileName).Download().Value.Content);
+            return new ValueTask<Stream>(client.GetBlobClient(fileName).Download(cancellationToken: cancellation).Value.Content);
         }
 
         public ValueTask<Stream> ReadPartialFileAsync(string path, long fromPosition, long includeToPosition, CancellationToken cancellation = default)
@@ -193,7 +193,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             var client = _ClientBuilder.GetBlobContainerClient(_ContainerName);
             using (var fs = new MemoryStream())
             {
-                client.UploadBlob(path.Trim('/') + "/", fs);
+                client.UploadBlob(path.Trim('/') + "/", fs, cancellationToken: cancellation);
             }
             return default;
         }
@@ -228,7 +228,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
             try
             {
                 var blobClient = client.GetBlobClient(path);
-                blobClient.Delete();
+                blobClient.Delete(cancellationToken: cancellation);
                 return default;
             }
             catch
@@ -236,7 +236,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
                 // Not a file
             }
 
-            var pages = client.GetBlobsByHierarchy(prefix: path + "/", delimiter: "/").AsPages(pageSizeHint: 3);
+            var pages = client.GetBlobsByHierarchy(prefix: path + "/", delimiter: "/",cancellationToken: cancellation).AsPages(pageSizeHint: 3);
             var firstPage = pages.FirstOrDefault();
 
             if (firstPage != null)
@@ -255,7 +255,7 @@ namespace NSPersonalCloud.FileSharing.Aliyun
                 }
                 if (deleteFolder)
                 {
-                    client.GetBlobClient(path + "/").Delete();
+                    client.GetBlobClient(path + "/").Delete(cancellationToken: cancellation);
                 }
             }
 

@@ -204,7 +204,7 @@ namespace LocalHosted
                             }
                         }
 
-                        var appinfs = new NSPersonalCloud.FileSharing.AppInFs();
+                        var appinfs = new NSPersonalCloud.FileSharing.AppInFs(l);
                         appinfs.GetApps = () => pc1.Apps;
                         appinfs.GetUrl = (x) => pc1.GetWebAppUri(x).ToString();
                         var ls = await appinfs.EnumerateChildrenAsync("/").ConfigureAwait(false);
@@ -476,6 +476,68 @@ namespace LocalHosted
                         srv2.Dispose();
                         Thread.Sleep(10000);
                         _= pc1.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
+                        Thread.Sleep(1000);
+                        SimapleShareCheckContent(pc1, 2, 1);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void TestRepubNodes()
+        {
+            using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
+            {
+                var l = loggerFactory.CreateLogger<LocalServiceTest>();
+                var t = DateTime.Now;
+
+                var ran = new Random();
+                int nport1 = ran.Next(1000, 10000);
+                int nport2 = ran.Next(1000, 10000);
+
+                l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
+                var inf1 = new HostPlatformInfo();
+                using (var srv1 = new PCLocalService(inf1,
+                 loggerFactory, Getfs(inf1.GetConfigFolder()), null))
+                {
+                    srv1.TestSetReannounceTime(3 * 1000);
+                    srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
+                    srv1.StartService();
+                    var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+                    var ret = srv1.SharePersonalCloud(pc1).Result;
+
+                    Thread.Sleep(1000);
+
+                    var inf2 = new HostPlatformInfo();
+                    using (var srv2 = new PCLocalService(inf2,
+                    loggerFactory, Getfs(inf2.GetConfigFolder()), null))
+                    {
+                        srv2.TestSetReannounceTime(3 * 1000);
+                        srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
+                        l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
+                        srv2.StartService();
+
+                        //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
+                        Thread.Sleep(1000);
+                        l.LogInformation("before srv2.JoinPersonalCloud();");
+                        var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
+                        Thread.Sleep(1000);
+
+                        SimapleShareCheckContent(pc2, 2, 2);
+                        SimapleShareCheckContent(pc1, 2, 2);
+
+                        Thread.Sleep(10000);
+                        
+                        SimapleShareCheckContent(pc2, 2, 2);
+                        SimapleShareCheckContent(pc1, 2, 2);
+
+                        SimapleShareCheckContent(pc2, 2, 2);
+                        SimapleShareCheckContent(pc1, 2, 2);
+
+                        srv2.StopNetwork();
+                        srv2.Dispose();
+                        Thread.Sleep(10000);
+                        _ = pc1.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Thread.Sleep(1000);
                         SimapleShareCheckContent(pc1, 2, 1);
                     }

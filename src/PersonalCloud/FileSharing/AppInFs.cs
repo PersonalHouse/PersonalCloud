@@ -139,7 +139,7 @@ namespace NSPersonalCloud.FileSharing
             }
             catch (Exception e)
             {
-                _logger.LogError("Exception in GetContent", e);
+                _logger.LogError($"Exception in GetContent {e.Message} {e.StackTrace}", e);
                 return null;
             }
         }

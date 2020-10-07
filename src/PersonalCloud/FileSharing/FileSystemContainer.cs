@@ -180,7 +180,7 @@ namespace NSPersonalCloud.FileSharing
                 try
                 {
                     //logger.LogTrace($"GetFreeSpaceAsync {item.Key}");
-                    var fs = await item.Value.GetFreeSpaceAsync().ConfigureAwait(false);
+                    var fs = await item.Value.GetFreeSpaceAsync(cancellation).ConfigureAwait(false);
                     TotalFreeSpace += fs.FreeBytesAvailable;
                     TotalSize += fs.TotalNumberOfBytes;
                     AvailableFreeSpace += fs.TotalNumberOfFreeBytes;
@@ -234,7 +234,7 @@ namespace NSPersonalCloud.FileSharing
                     return fs.ReadMetadataAsync(subpath, cancellation);
                 }
             }
-            catch(FileNotFoundException e)
+            catch(FileNotFoundException )
             {
                 throw;
             }

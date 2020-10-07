@@ -63,16 +63,10 @@ namespace NSPersonalCloud
             State = NodeDiscoveryState.Created;
             TimeStamp = DateTime.UtcNow.ToFileTime();
 
-            NetworkChange.NetworkAddressChanged += new
-            NetworkAddressChangedEventHandler(AddressChangedCallback);
+//             NetworkChange.NetworkAddressChanged += new
+//             NetworkAddressChangedEventHandler(AddressChangedCallback);
         }
 
-        private void AddressChangedCallback(object sender, EventArgs e)
-        {
-            StopNetwork();
-            StartMonitoring();
-            StartSearch();
-        }
 
         void FillProxies(List<Tuple<IPAddress, int>>  ips)
         {
@@ -96,6 +90,7 @@ namespace NSPersonalCloud
                     _SocketProxies.Add(item.Item1, svr);
                 }
             }
+
         }
 
 
@@ -203,16 +198,8 @@ namespace NSPersonalCloud
                 logger.LogError(exception, "Timer callback finished with error.");
             }
         }
-
-        public Task RePublish(string nodeguid,int webserverport)
+        void FillAnnounceStr(string nodeguid, int webserverport)
         {
-            logger.LogDebug($"{webserverport} is going to RePublish");
-
-            Interlocked.Increment(ref TimeStamp);
-
-            var ips = GetLocalIPAddress();
-            FillProxies(ips);
-
             lock (_SocketProxies)
             {
                 foreach (var item in _SocketProxies)
@@ -245,6 +232,17 @@ namespace NSPersonalCloud
                     }
                 }
             }
+        }
+        public Task RePublish(string nodeguid,int webserverport)
+        {
+            logger.LogDebug($"{webserverport} is going to RePublish");
+
+            Interlocked.Increment(ref TimeStamp);
+
+            var ips = GetLocalIPAddress();
+            FillProxies(ips);
+            FillAnnounceStr(nodeguid, webserverport);
+
             timer.Change(0, RepublicTime);
             return Task.CompletedTask;
 
@@ -258,10 +256,10 @@ namespace NSPersonalCloud
         public void StopNetwork()
         {
             timer.Change(Timeout.Infinite, Timeout.Infinite);
-            CleaEndPoints();
+            CleanEndPoints();
         }
 
-        void CleaEndPoints()
+        void CleanEndPoints()
         {
             lock (_SocketProxies)
             {
@@ -279,7 +277,7 @@ namespace NSPersonalCloud
             {
                 return;
             }
-            CleaEndPoints();
+            CleanEndPoints();
             var ips = GetLocalIPAddress();
             FillProxies(ips);
 
@@ -332,7 +330,7 @@ namespace NSPersonalCloud
             if (disposing)
             {
                 timer?.Dispose();
-                CleaEndPoints();
+                CleanEndPoints();
             }
         }
 

@@ -230,9 +230,9 @@ namespace NSPersonalCloud
             byte[] buffer = new byte[32768];
             int read;
             while (bytes > 0 &&
-                   (read = await input.ReadAsync(buffer, 0, (int) Math.Min((long) buffer.Length, bytes)).ConfigureAwait(false)) > 0)
+                   (read = await input.ReadAsync(buffer.AsMemory(0, (int) Math.Min((long) buffer.Length, bytes))).ConfigureAwait(false)) > 0)
             {
-                await output.WriteAsync(buffer, 0, read).ConfigureAwait(false);
+                await output.WriteAsync(buffer.AsMemory(0, read)).ConfigureAwait(false);
                 bytes -= read;
             }
         }

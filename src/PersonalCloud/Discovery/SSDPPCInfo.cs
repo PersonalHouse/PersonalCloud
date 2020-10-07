@@ -3,7 +3,7 @@
     //ssdp personal cloud info
     public class SSDPPCInfo
     {
-        public string Id { get; set; }
+        public string Id { get; set; }//cloud id
 
 #pragma warning disable CA1819 // Properties should not return arrays
         public byte[] EN { get; set; }//encrypted node name
