@@ -99,7 +99,7 @@ namespace NSPersonalCloud
             httpclient.Timeout = TimeSpan.FromSeconds(10);
             nodeDiscovery = new NodeDiscovery(logfac);
             nodeDiscovery.OnNodeAdded += NodeDiscovery_OnNodeAdded;
-            nodeDiscovery.OnError += (o, e) => OnError?.Invoke(this, new ServiceErrorEventArgs(e));
+            nodeDiscovery.OnError += NodeDiscovery_OnError;
             fetchQueue = new List<FetchQueueItem>();
 
             var cfg = LoadConfiguration();
@@ -116,6 +116,21 @@ namespace NSPersonalCloud
             fetchCloudInfo = new ActionBlock<NodeInfo>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions() { MaxDegreeOfParallelism = 3 });
             InitWebServer();
 
+        }
+
+        private void NodeDiscovery_OnError(object sender, ErrorCode e)
+        {
+            switch (e)
+            {
+                case ErrorCode.NeedUpdate:
+                    OnError?.Invoke(this, new ServiceErrorEventArgs(e));
+                    break;
+                case ErrorCode.NetworkLayer:
+                    NetworkRefeshNodes();
+                    break;
+                default:
+                    break;
+            }
         }
 
 #pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.

@@ -196,6 +196,9 @@ namespace NSPersonalCloud
             catch (Exception exception)
             {
                 logger.LogError(exception, "Timer callback finished with error.");
+                Task.Run(() => {
+                    OnError?.Invoke(this, ErrorCode.NetworkLayer);
+                });
             }
         }
         void FillAnnounceStr(string nodeguid, int webserverport)
@@ -236,6 +239,7 @@ namespace NSPersonalCloud
         public Task RePublish(string nodeguid,int webserverport)
         {
             logger.LogDebug($"{webserverport} is going to RePublish");
+            CleanEndPoints();
 
             Interlocked.Increment(ref TimeStamp);
 

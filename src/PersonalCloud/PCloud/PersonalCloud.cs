@@ -264,7 +264,7 @@ namespace NSPersonalCloud
             }
             catch (Exception e)
             {
-                logger.LogError("Exception in GetPeerPCInfo", e);
+                logger.LogError(e,$"Exception in GetPeerPCInfo {ninfo?.Url}");
                 return null;
             }
         }

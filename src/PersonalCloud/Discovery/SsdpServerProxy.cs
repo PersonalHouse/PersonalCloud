@@ -328,6 +328,7 @@ namespace NSPersonalCloud
         {
             if (disposing)
             {
+                OnError = null;
                 if (!disposedValue)
                 {
                     if (sendsocket != null)
