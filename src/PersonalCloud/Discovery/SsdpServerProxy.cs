@@ -309,6 +309,7 @@ namespace NSPersonalCloud
         {
             try
             {
+                logger.LogInformation("OnListenError");
                 if (!disposedValue)
                 {
                     ReInitSocket();

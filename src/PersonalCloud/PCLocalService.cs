@@ -126,7 +126,8 @@ namespace NSPersonalCloud
                     OnError?.Invoke(this, new ServiceErrorEventArgs(e));
                     break;
                 case ErrorCode.NetworkLayer:
-                    NetworkRefeshNodes();
+                    logger.LogInformation("Restart network due to socket error");
+                    NetworkRefeshNodes(true);
                     break;
                 default:
                     break;
@@ -697,7 +698,7 @@ namespace NSPersonalCloud
                     }
                     if (updatenet)
                     {
-                        this.NetworkRefeshNodes();
+                        this.NetworkRefeshNodes(false);
                     }
                 }
 
@@ -797,7 +798,7 @@ namespace NSPersonalCloud
 
             EnsureWebServerStarted();
             await EnsureSSDPStarted().ConfigureAwait(false);
-            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort,false).ConfigureAwait(false);
 
             return pc;
 
@@ -825,7 +826,7 @@ namespace NSPersonalCloud
                 }
                 if (n > 0)
                 {
-                    await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
+                    await nodeDiscovery.RePublish(NodeId, ServerPort,false).ConfigureAwait(false);
                 }
             }
         }
@@ -837,7 +838,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             var str = pc.GenerateShareCode();
-            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort,false).ConfigureAwait(false);
             return str;
         }
 
@@ -848,7 +849,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             pc.CurrentShareCode = null;
-            await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
+            await nodeDiscovery.RePublish(NodeId, ServerPort,false).ConfigureAwait(false);
             return;
         }
 
@@ -890,7 +891,7 @@ namespace NSPersonalCloud
                     {
                         KnownNodes.Clear();
                     }
-                    await nodeDiscovery.RePublish(NodeId, ServerPort).ConfigureAwait(false);
+                    await nodeDiscovery.RePublish(NodeId, ServerPort,false).ConfigureAwait(false);
                     nodeDiscovery.StartSearch();
                     logger.LogDebug($"Join {pc.DisplayName}");
                     return pc;
@@ -936,15 +937,16 @@ namespace NSPersonalCloud
             }
 
             nodeDiscovery.StartMonitoring();
-            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort,false);
             nodeDiscovery.StartSearch();
         }
 
         //republish cloud info to network
-        public void NetworkRefeshNodes()
+        //if force equals true, Sockets will be reinitialized.
+        public void NetworkRefeshNodes(bool force=false)
         {
             //nodeDiscovery.ForceNetworkRefesh();
-            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort, force);
             nodeDiscovery.StartSearch();
         }
 
@@ -965,7 +967,7 @@ namespace NSPersonalCloud
                 _PersonalClouds.Remove(pc);
             }
             SavePCList();
-            _ = nodeDiscovery.RePublish(NodeId, ServerPort);
+            _ = nodeDiscovery.RePublish(NodeId, ServerPort,false);
         }
 
         //Seting multicast ports.for internal use only

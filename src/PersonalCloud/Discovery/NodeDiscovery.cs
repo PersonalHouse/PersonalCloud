@@ -68,7 +68,7 @@ namespace NSPersonalCloud
         }
 
 
-        void FillProxies(List<Tuple<IPAddress, int>>  ips)
+        void AddProxies(List<Tuple<IPAddress, int>>  ips)
         {
             lock (_SocketProxies)
             {
@@ -182,9 +182,9 @@ namespace NSPersonalCloud
 
         private void OnTimer(object state)
         {
-            // Alternative: Remove this try-catch and correct ObjectDisposedException in code logic.
             try
             {
+                logger.LogInformation("OnTimer");
                 lock (_SocketProxies)
                 {
                     foreach (var item in _SocketProxies)
@@ -209,6 +209,10 @@ namespace NSPersonalCloud
                 {
                     try
                     {
+                        if (!string.IsNullOrWhiteSpace(item.Value.AnnounceString))
+                        {
+                            continue;
+                        }
                         var ip = item.Key;
                         string url = null;
                         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
@@ -236,15 +240,19 @@ namespace NSPersonalCloud
                 }
             }
         }
-        public Task RePublish(string nodeguid,int webserverport)
+        public Task RePublish(string nodeguid,int webserverport,bool reinitsockets)
         {
             logger.LogDebug($"{webserverport} is going to RePublish");
-            CleanEndPoints();
-
             Interlocked.Increment(ref TimeStamp);
 
+            if (reinitsockets)
+            {
+                CleanEndPoints();
+            }
+
+
             var ips = GetLocalIPAddress();
-            FillProxies(ips);
+            AddProxies(ips);
             FillAnnounceStr(nodeguid, webserverport);
 
             timer.Change(0, RepublicTime);
@@ -283,7 +291,7 @@ namespace NSPersonalCloud
             }
             CleanEndPoints();
             var ips = GetLocalIPAddress();
-            FillProxies(ips);
+            AddProxies(ips);
 
             lock (_SocketProxies)
             {

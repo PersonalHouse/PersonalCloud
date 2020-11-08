@@ -131,6 +131,17 @@ namespace NSPersonalCloud
             catch (Exception exception)
             {
                 logger.LogError(exception, "Exception in UdpMulticastServer.");
+                Task.Run(() => {
+                    try
+                    {
+                        StoreSocketAsyncEventArgs(e);
+                        ctx.ErrorCallback?.Invoke(SocketError.SocketError);
+                    }
+                    catch (Exception)
+                    {
+                        logger.LogError(exception, "Exception in UdpMulticastServer Exception.");
+                    }
+                });
             }
         }
 
