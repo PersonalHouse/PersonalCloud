@@ -209,10 +209,6 @@ namespace NSPersonalCloud
                 {
                     try
                     {
-                        if (!string.IsNullOrWhiteSpace(item.Value.AnnounceString))
-                        {
-                            continue;
-                        }
                         var ip = item.Key;
                         string url = null;
                         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
