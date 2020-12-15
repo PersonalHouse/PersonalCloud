@@ -266,6 +266,7 @@ namespace NSPersonalCloud
         }
         void ReInitSocket()
         {
+            logger.LogInformation("SsdpServerProxy ReInitSocket");
             lock (address)
             {
                 sendsocket?.Dispose();
@@ -296,7 +297,7 @@ namespace NSPersonalCloud
         {
             try
             {
-                if (!disposedValue)
+                if (!IsDisposed)
                 {
                     ReInitSocket();
                 }
@@ -310,7 +311,7 @@ namespace NSPersonalCloud
             try
             {
                 logger.LogInformation("OnListenError");
-                if (!disposedValue)
+                if (!IsDisposed)
                 {
                     ReInitSocket();
                 }
@@ -323,14 +324,14 @@ namespace NSPersonalCloud
 
 
         #region IDisposable Support
-        private bool disposedValue; // To detect redundant calls
+        private bool IsDisposed; // To detect redundant calls
 
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
             {
                 OnError = null;
-                if (!disposedValue)
+                if (!IsDisposed)
                 {
                     if (sendsocket != null)
                     {
@@ -343,7 +344,7 @@ namespace NSPersonalCloud
                         listensocket = null;
                     }
                 }
-                disposedValue = true;
+                IsDisposed = true;
             }
         }
 
