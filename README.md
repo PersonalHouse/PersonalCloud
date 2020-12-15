@@ -1,6 +1,7 @@
 # Personal Cloud
+## [Website](https://Personal.House/ "Website")
+
 Personal cloud connects personal devices together. Our aim is to provide a cloud to help users to access their data from **any device, any where**, and do **any operation**, with privacy, persistence, secure and convenience.   
-For example, one could access a smartphone album from one laptop computer, or backup albums to a laptop/htpc automatically, or view a video file stored on a laptop from a smartphone or tablet.       
 
 ## Comparison with traditional clouds/cloud storage providers.
 Traditional clouds like aws/azure, are server side clouds. They are an enhancement to traditional enterprise servers like rack, tape library etc.  Personal cloud is the enhancement to personal computer/laptop/smartphone.  
@@ -11,8 +12,8 @@ Personal cloud focus on
 **Persistence:** The personal data may be persistent through one's life time.
 
 
-## Current status
-One device could join a personal cloud with/without a shared folder. Folders from all devices in one personal cloud will form a disk/volume. User could access any data in the personal cloud from any device.  
+## Usage
+One device could join a personal cloud with/without a shared folder. Folders from all devices in one personal cloud will form a disk/volume. User could access any data in the personal cloud from any devices.  
 
 ## For Developer
 See the following chart
