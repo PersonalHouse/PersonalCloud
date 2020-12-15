@@ -1,5 +1,5 @@
 # Personal Cloud
-## [Website](https://Personal.House/ "Website")
+You can visit the ## [Website](https://Personal.House/ "Website")
 
 Personal cloud connects personal devices together. Our aim is to provide a cloud to help users to access their data from **any device, any where**, and do **any operation**, with privacy, persistence, secure and convenience.   
 
