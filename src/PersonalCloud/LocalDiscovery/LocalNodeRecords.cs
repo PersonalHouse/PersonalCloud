@@ -384,20 +384,28 @@ namespace NSPersonalCloud.LocalDiscovery
 
         public void Start(int webport, string thisnodeid)
         {
-            if (State == NodeDiscoveryState.Listening)
+            try
             {
-                _Network.EnsureListenSocketFine();
-                return;
+                if (State == NodeDiscoveryState.Listening)
+                {
+                    _Network.EnsureListenSocketFine();
+                    return;
+                }
+
+                WebServerPort = webport;
+                ThisNodeID = thisnodeid;
+
+                _Network.Start(BindPort, TargetPort, WebServerPort, ThisNodeID);
+                _BroadcastingTimer.Change(0, RepublicTime);
+                _Network.SendSearch(TargetPort);
+
+                State = NodeDiscoveryState.Listening;
             }
-
-            WebServerPort = webport;
-            ThisNodeID = thisnodeid;
-
-            _Network.Start(BindPort, TargetPort, WebServerPort, ThisNodeID);
-            _BroadcastingTimer.Change(0, RepublicTime);
-            _Network.SendSearch(TargetPort);
-
-            State = NodeDiscoveryState.Listening;
+            catch (Exception e)
+            {
+                logger.LogError(e, "Exception in LocalNodeRecords:Start");
+                throw;
+            }
         }
 
         public void SendCloudUpdateEvent()

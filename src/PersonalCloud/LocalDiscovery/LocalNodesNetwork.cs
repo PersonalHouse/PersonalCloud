@@ -162,11 +162,11 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             var msg = Combine(header, messageData);
 
-            var socks = _ListenSockets.Select(x => x.Item3).ToList();
-            foreach (var item in socks)
+            var solis = _ListenSockets;
+            foreach (var soinf in solis)
             {
                 IPEndPoint endp;
-                if (item.AddressFamily == AddressFamily.InterNetwork)
+                if (soinf.Item1.AddressFamily == AddressFamily.InterNetwork)
                 {
                     endp = new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
                 }
@@ -174,15 +174,16 @@ namespace NSPersonalCloud.LocalDiscovery
                 {
                     endp = new IPEndPoint(IPAddress.Parse("FF02::C"), port);
                 }
-                _ = _SockertLayer.SendTo(item, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
+                _ = _SockertLayer.SendTo(soinf.Item3, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
             }
         }
-        void SendMessage(Socket so, IPAddress localip, byte[] messageData, int port)
+        void SendMessage(Tuple<IPAddress, int, Socket> tuple, byte[] messageData, int port)
         {
             var msg = Combine(header, messageData);
 
+            //var sso = _SockertLayer.CreateClientSocket(tuple.Item1, tuple.Item2);
             IPEndPoint endp;
-            if (localip.AddressFamily == AddressFamily.InterNetwork)
+            if (tuple.Item1.AddressFamily == AddressFamily.InterNetwork)
             {
                 endp = new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
             }
@@ -190,7 +191,7 @@ namespace NSPersonalCloud.LocalDiscovery
             {
                 endp = new IPEndPoint(IPAddress.Parse("FF02::C"), port);
             }
-            _ = _SockertLayer.SendTo(so, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
+            _ = _SockertLayer.SendTo(tuple.Item3, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
         }
 
 
@@ -238,7 +239,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 var arr = ms.ToArray();
                 foreach (var port in _TargetPort)
                 {
-                    SendMessage(ip.Item3, ip.Item1, arr, port);
+                    SendMessage(ip, arr, port);
                 }
             }
         }
@@ -365,9 +366,9 @@ namespace NSPersonalCloud.LocalDiscovery
             try
             {
 #pragma warning disable CA2000 // Dispose objects before losing scope
-                so = _SockertLayer.CreateMulticastSocket(item.Item1, item.Item2, _BindPort);
+                so = _SockertLayer.CreateListenSocket(item.Item1, item.Item2, _BindPort);
 #pragma warning restore CA2000 // Dispose objects before losing scope
-                _SockertLayer.StartListen(so, SocketListernCallback, OnSocketError);
+                _SockertLayer.StartListen(so, item.Item1, SocketListernCallback, OnSocketError);
             }
             catch (Exception e)
             {
@@ -453,6 +454,10 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             try
             {
+                if (buffer[0]!=44 ||buffer[1]!=59|| buffer[2]!=48 )
+                {
+                    return Task.FromResult(true);
+                }
                 var version = BitConverter.ToInt16(buffer, 3);
                 if (version > Definition.CloudVersion)
                 {
