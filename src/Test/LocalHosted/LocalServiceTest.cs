@@ -39,7 +39,7 @@ namespace LocalHosted
                     loggerFactory, Getfs(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
-                    var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
+                    var pc = srv.CreatePersonalCloud("test", "testfolder");
                     Thread.Sleep(1000);
                     var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                     Assert.AreEqual( 1, lis.Count);
@@ -68,9 +68,9 @@ namespace LocalHosted
                         srv2.StartService();
 
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
-                        var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+                        var pc1 = srv1.CreatePersonalCloud("test", "test1");
 
-                        var ret = srv1.SharePersonalCloud(pc1).Result;
+                        var ret = srv1.SharePersonalCloud(pc1);
                         Thread.Sleep(3000);
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
@@ -113,7 +113,7 @@ namespace LocalHosted
                         srv2.StartService();
 
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
-                        var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+                        var pc1 = srv1.CreatePersonalCloud("test", "test1");
 
                         var strcfig = JsonConvert.SerializeObject(new List<AlbumConfig>() {
                             new AlbumConfig {
@@ -125,7 +125,7 @@ namespace LocalHosted
 
                         Assert.AreEqual(pc1.Apps?.Count, 1);
 
-                        var ret = srv1.SharePersonalCloud(pc1).Result;
+                        var ret = srv1.SharePersonalCloud(pc1);
                         Thread.Sleep(3000);
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
@@ -175,7 +175,7 @@ namespace LocalHosted
                         srv2.StartService();
 
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
-                        var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
+                        var pc1 = srv1.CreatePersonalCloud("test", "test1");
 
 
                         var strcfig = JsonConvert.SerializeObject(new List<AlbumConfig>() {
@@ -189,7 +189,7 @@ namespace LocalHosted
 
                         Assert.AreEqual(pc1.Apps?.Count, 1);
 
-                        var ret = srv1.SharePersonalCloud(pc1).Result;
+                        var ret = srv1.SharePersonalCloud(pc1);
                         Thread.Sleep(3000);
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
@@ -232,10 +232,10 @@ namespace LocalHosted
                 using (var srv1 = new PCLocalService(inf1,
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
-                    srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
+                    srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
-                    var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
-                    var ret = srv1.SharePersonalCloud(pc1).Result;
+                    var pc1 = srv1.CreatePersonalCloud("test", "test1");
+                    var ret = srv1.SharePersonalCloud(pc1);
 
                     Thread.Sleep(1000);
                     
@@ -243,7 +243,7 @@ namespace LocalHosted
                     using (var srv2 = new PCLocalService(inf2,
                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
                     {
-                        srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
+                        srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
                         srv2.StartService();
 
@@ -282,12 +282,12 @@ namespace LocalHosted
 
                 Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = 3 },
                     i => {
-                        srv[i].SetUdpPort(ports[i], ports);
+                        srv[i].TestSetUdpPort(ports[i], ports);
                         srv[i].StartService();
                     });
 
-                pcs[0] = srv[0].CreatePersonalCloud("test", "test0").Result;
-                var ret = srv[0].SharePersonalCloud(pcs[0]).Result;
+                pcs[0] = srv[0].CreatePersonalCloud("test", "test0");
+                var ret = srv[0].SharePersonalCloud(pcs[0]);
                 l.LogInformation("srv0 is sharing");
                 Thread.Sleep(10000);
 
@@ -327,7 +327,7 @@ namespace LocalHosted
                     loggerFactory, Getfs(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
-                    var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
+                    var pc = srv.CreatePersonalCloud("test", "testfolder");
                     Thread.Sleep(1000);
                     for (int i = 0; i < 100; i++)
                     {
@@ -355,7 +355,7 @@ namespace LocalHosted
                     loggerFactory, Getfs(inf.GetConfigFolder()), null))
                 {
                     srv.StartService();
-                    var pc = srv.CreatePersonalCloud("test", "testfolder").Result;
+                    var pc = srv.CreatePersonalCloud("test", "testfolder");
                     Thread.Sleep(1000);
                     for (int i = 0; i < 10; i++)
                     {
@@ -394,10 +394,10 @@ namespace LocalHosted
                 using (var srv1 = new PCLocalService(inf1,
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
-                    srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
+                    srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
-                    var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
-                    var ret = srv1.SharePersonalCloud(pc1).Result;
+                    var pc1 = srv1.CreatePersonalCloud("test", "test1");
+                    var ret = srv1.SharePersonalCloud(pc1);
 
                     Thread.Sleep(1000);
 
@@ -405,7 +405,7 @@ namespace LocalHosted
                     using (var srv2 = new PCLocalService(inf2,
                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
                     {
-                        srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
+                        srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
                         srv2.StartService();
 
@@ -447,10 +447,10 @@ namespace LocalHosted
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
                     srv1.TestSetReannounceTime(3 * 1000);
-                    srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
+                    srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
-                    var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
-                    var ret = srv1.SharePersonalCloud(pc1).Result;
+                    var pc1 = srv1.CreatePersonalCloud("test", "test1");
+                    var ret = srv1.SharePersonalCloud(pc1);
 
                     Thread.Sleep(1000);
 
@@ -459,7 +459,7 @@ namespace LocalHosted
                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
                     {
                         srv2.TestSetReannounceTime(3 * 1000);
-                        srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
+                        srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
                         srv2.StartService();
 
@@ -501,10 +501,10 @@ namespace LocalHosted
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
                     srv1.TestSetReannounceTime(3 * 1000);
-                    srv1.SetUdpPort(nport1, new[] { nport2, nport1 });
+                    srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
-                    var pc1 = srv1.CreatePersonalCloud("test", "test1").Result;
-                    var ret = srv1.SharePersonalCloud(pc1).Result;
+                    var pc1 = srv1.CreatePersonalCloud("test", "test1");
+                    var ret = srv1.SharePersonalCloud(pc1);
 
                     Thread.Sleep(1000);
 
@@ -513,7 +513,7 @@ namespace LocalHosted
                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
                     {
                         srv2.TestSetReannounceTime(3 * 1000);
-                        srv2.SetUdpPort(nport2, new[] { nport2, nport1 });
+                        srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
                         srv2.StartService();
 

@@ -248,14 +248,14 @@ namespace NSPersonalCloud
         #region Node update
 
         Lazy<HttpClient> httpClient;
-        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, NodeInfo ninfo)
+        private async Task<PersonalCloudInfo> GetPeerPCInfo(PersonalCloud pc, LocalDiscovery.LocalNodeInfo ninfo)
         {
             try
             {
                 var url = new Uri(new Uri(ninfo.Url), "/api/share/cloud");
                 var s = await TopFolderClient.GetCloudInfo(httpClient.Value, url, pc.Id, pc.MasterKey).ConfigureAwait(false);
                 var cfg = JsonConvert.DeserializeObject<PersonalCloudInfo>(s);
-                var lis = cfg.Apps.Where(x => x.NodeId != ninfo.NodeGuid).ToList();
+                var lis = cfg.Apps.Where(x => x.NodeId != ninfo.NodeId).ToList();
                 foreach (var item in lis)
                 {
                     cfg.Apps.Remove(item);
@@ -269,7 +269,7 @@ namespace NSPersonalCloud
             }
         }
 
-        internal async Task OnNodeUpdate(NodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
+        internal async Task OnLocalNodeUpdate(LocalDiscovery.LocalNodeInfo ninfo, List<SSDPPCInfo> ssdpinfo)
         {
             bool updated = false;
             bool deleted = false;
@@ -285,7 +285,7 @@ namespace NSPersonalCloud
                         return;
                     }
 
-                    NodeInfoForPC info = CachedNodes.FirstOrDefault(x => x.NodeGuid == ninfo.NodeGuid);
+                    NodeInfoForPC info = CachedNodes.FirstOrDefault(x => x.NodeGuid == ninfo.NodeId);
                     if (info != null)
                     {
                         if (info.PCTimeStamp < ssdpin.TimeStamp)
@@ -299,7 +299,7 @@ namespace NSPersonalCloud
                         }
                     }
                     var newinf = new NodeInfoForPC {
-                        NodeGuid = ninfo.NodeGuid,
+                        NodeGuid = ninfo.NodeId,
                         PCVersion = ninfo.PCVersion,
                         PCTimeStamp = ssdpin.TimeStamp,
                         Url = ninfo.Url,
@@ -313,13 +313,13 @@ namespace NSPersonalCloud
                 else
                 {
                     int nremoved = 0;
-                    if (CachedNodes.FirstOrDefault(x => x.NodeGuid == ninfo.NodeGuid) != null)
+                    if (CachedNodes.FirstOrDefault(x => x.NodeGuid == ninfo.NodeId) != null)
                     {
-                        nremoved = CachedNodes.RemoveAll(x => x.NodeGuid == ninfo.NodeGuid);
+                        nremoved = CachedNodes.RemoveAll(x => x.NodeGuid == ninfo.NodeId);
                     }
                     if (nremoved > 0)
                     {
-                        logger.LogTrace($"Removing node {ninfo.NodeGuid} {ninfo.NodeGuid} all");
+                        logger.LogTrace($"Removing node {ninfo.NodeId} {ninfo.NodeId} all");
                         OnCachedNodesChange();
                         deleted = true;
                     }
@@ -594,7 +594,7 @@ namespace NSPersonalCloud
             }
         }
 
-        internal void OnNodeAdded(NodeShareInfo ninfo, string nodename, long pctimeStamp)
+        internal void OnNodeAdded(LocalDiscovery.NodeShareInfo ninfo, string nodename, long pctimeStamp)
         {
             var newinf = new NodeInfoForPC {
                 NodeGuid = ninfo.NodeId,

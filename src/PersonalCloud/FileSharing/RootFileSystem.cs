@@ -79,7 +79,6 @@ namespace NSPersonalCloud.RootFS
                 }
                 else throw new DeviceNotFoundException();
             }
-            Service?.CleanExpiredNodes();
             return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => {
                 var entry = new FileSystemEntry {
                     Name = x.Key,

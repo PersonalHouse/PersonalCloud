@@ -138,7 +138,9 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                 }
                 else
                 {
-                    using (var image = new MagickImage(file.FullName))
+                    var setting = new MagickReadSettings();
+                    setting.ColorSpace = ColorSpace.RGB;
+                    using (var image = new MagickImage(file.FullName, setting))
                     {
                         var profile = image.GetExifProfile();
                         if (profile != null)
@@ -153,7 +155,7 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
                         UpdateYearMonthDay(imginfo);
 
                         GenerateThumbnail(file, imginfo, image);
-                        if (imginfo.Width==0)
+                        if (imginfo.Width == 0)
                         {
                             var thpath = Path.Combine(_dbFolder, Defines.ThumbnailFileName);
                             Directory.CreateDirectory(thpath);

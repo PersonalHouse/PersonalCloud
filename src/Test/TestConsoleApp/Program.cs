@@ -121,10 +121,10 @@ namespace TestConsoleApp
             pcservice.InstallApps().Wait();
 
             pcservice.StartService();
-            pc = pcservice.CreatePersonalCloud("test", "test1").Result;
+            pc = pcservice.CreatePersonalCloud("test", "test1");
 
 
-            var ret = pcservice.SharePersonalCloud(pc).Result;
+            var ret = pcservice.SharePersonalCloud(pc);
 
 
             Console.WriteLine($"Share code is {ret}");

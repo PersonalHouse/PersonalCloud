@@ -9,3 +9,5 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031", Justification = "<Pending>", Scope = "module")]
 [assembly: System.Diagnostics.CodeAnalysis.SuppressMessage("Globalization", "CA1303", Justification = "<Pending>", Scope = "module")]
 [assembly: SuppressMessage("Globalization", "CA1307:Specify StringComparison", Justification = "<Pending>", Scope = "module")]
+[assembly: SuppressMessage("Design", "CA1051:Do not declare visible instance fields", Justification = "<Pending>", Scope = "module")]
+[assembly: SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "<Pending>", Scope = "module")]
