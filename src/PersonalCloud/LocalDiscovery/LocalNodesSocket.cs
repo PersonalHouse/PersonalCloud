@@ -26,6 +26,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 so.ExclusiveAddressUse = false;
                 so.EnableBroadcast = true;
+                so.MulticastLoopback = false;
                 switch (localaddress.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:
@@ -101,13 +102,13 @@ namespace NSPersonalCloud.LocalDiscovery
 
 
 
-        internal void StartListen(Socket so, IPAddress localip , Func<byte[], int, IPEndPoint, 
+        internal void StartListen(Socket so, AddressFamily addressFamily  , Func<byte[], int, IPEndPoint, 
             Task<bool>> socketListernCallback, Action<Socket> errorcb)
         {
             Task.Run(async () => {
                 var buffer = new byte[4096];
                 EndPoint endp = null;
-                switch (localip.AddressFamily)
+                switch (addressFamily)
                 {
                     case AddressFamily.InterNetwork:
                         endp = (EndPoint) new IPEndPoint(IPAddress.Any, Definition.MulticastPort);
@@ -117,7 +118,7 @@ namespace NSPersonalCloud.LocalDiscovery
                         endp = (EndPoint) new IPEndPoint(IPAddress.IPv6Any, Definition.MulticastPort);
                         break;
                     default:
-                        logger.LogError($"StartListen:address {localip} is {localip.AddressFamily}");
+                        logger.LogError($"StartListen:address {addressFamily} {so.RemoteEndPoint}");
                         return;
                 }
 

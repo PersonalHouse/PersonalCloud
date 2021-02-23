@@ -368,7 +368,7 @@ namespace NSPersonalCloud.LocalDiscovery
 #pragma warning disable CA2000 // Dispose objects before losing scope
                 so = _SockertLayer.CreateListenSocket(item.Item1, item.Item2, _BindPort);
 #pragma warning restore CA2000 // Dispose objects before losing scope
-                _SockertLayer.StartListen(so, item.Item1, SocketListernCallback, OnSocketError);
+                _SockertLayer.StartListen(so, item.Item1.AddressFamily, SocketListernCallback, OnSocketError);
             }
             catch (Exception e)
             {
@@ -509,10 +509,27 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
+        static bool ByteArrayCompare(ReadOnlySpan<byte> a1, ReadOnlySpan<byte> a2)
+        {
+            return a1.SequenceEqual(a2);
+        }
 
         private void OnSearch(IPEndPoint remoteip)
         {
-            if (_ListenSockets.FirstOrDefault(x => x.Item1.Equals(remoteip.Address)) != null)
+            //so.MulticastLoopback = false;
+            if (_ListenSockets.FirstOrDefault(x => {
+                if (remoteip.Address.AddressFamily==AddressFamily.InterNetworkV6)
+                {
+                    if (x.Item2== remoteip.Address.ScopeId)
+                    {
+                        var da1 = x.Item1.GetAddressBytes();
+                        var da2 = remoteip.Address.GetAddressBytes();
+                        return ByteArrayCompare(da1, da2);
+                    }
+                    return false;
+                }
+                return x.Item1.Equals(remoteip.Address);
+            }) != null)
             {//this node
                 return;
             }
