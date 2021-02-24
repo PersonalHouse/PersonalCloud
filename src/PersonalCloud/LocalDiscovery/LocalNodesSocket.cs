@@ -60,6 +60,73 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
+
+        internal Socket CreateListenSocket(IPAddress localaddress, int port)
+        {
+            Socket so = null;
+            try
+            {
+                so = new Socket(localaddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                so.ExclusiveAddressUse = false;
+                so.EnableBroadcast = true;
+                so.MulticastLoopback = false;
+                switch (localaddress.AddressFamily)
+                {
+                    case AddressFamily.InterNetwork:
+                        so.Bind(new IPEndPoint(localaddress, port));
+                        break;
+                    case AddressFamily.InterNetworkV6:
+                        so.Bind(new IPEndPoint(localaddress, port));
+                        break;
+                    default:
+                        throw new InvalidOperationException($"address is {localaddress}");
+                }
+                so.Ttl = 5;
+                return so;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Error when creating Socket.");
+                so?.Dispose();
+                return null;
+            }
+        }
+
+        internal void JoinGroups(Socket so, AddressFamily addressFamily, IEnumerable<int> indices)
+        {
+            try
+            {
+                foreach (var ifidx in indices)
+                {
+                    if (ifidx == 0)//exception on windows
+                    {
+                        continue;
+                    }
+                    switch (addressFamily)
+                    {
+                        case AddressFamily.InterNetwork:
+                            so.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
+                                new MulticastOption(IPAddress.Parse("239.255.255.250"), ifidx));
+                            break;
+
+                        case AddressFamily.InterNetworkV6:
+                            so.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface, ifidx);
+
+                            so.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership,
+                                new IPv6MulticastOption(IPAddress.Parse("FF02::C"), ifidx));
+                            break;
+                        default:
+                            throw new InvalidOperationException($"address is {addressFamily}");
+                    }
+                }
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Error when JoinGroups.");
+            }
+        }
+
         internal Socket CreateClientSocket(IPAddress localaddress, int interfaceIndex)
         {
             Socket so = null;
@@ -94,7 +161,7 @@ namespace NSPersonalCloud.LocalDiscovery
             }
             catch (Exception exception)
             {
-                logger.LogError(exception, "Error when creating Socket.");
+                logger.LogError(exception, "Error when CreateClientSocket.");
                 so?.Dispose();
                 return null;
             }
