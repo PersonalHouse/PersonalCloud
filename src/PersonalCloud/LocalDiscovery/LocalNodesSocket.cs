@@ -17,49 +17,6 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             logger = l;
         }
-        internal Socket CreateListenSocket(IPAddress localaddress, int interfaceIndex, int port)
-        {
-            Socket so = null;
-            try
-            {
-                so = new Socket(localaddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
-                so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                so.ExclusiveAddressUse = false;
-                so.EnableBroadcast = true;
-                so.MulticastLoopback = false;
-                switch (localaddress.AddressFamily)
-                {
-                    case AddressFamily.InterNetwork:
-                        so.Bind(new IPEndPoint(IPAddress.Any, port));
-                        so.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership,
-                            new MulticastOption(IPAddress.Parse("239.255.255.250"), localaddress));
-                        break;
-
-                    case AddressFamily.InterNetworkV6:
-                        so.Bind(new IPEndPoint(IPAddress.IPv6Any, port));
-                        so.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.MulticastInterface, interfaceIndex);
-
-                        if (interfaceIndex >= 0)
-                            so.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership,
-                                new IPv6MulticastOption(IPAddress.Parse("FF02::C"), interfaceIndex));
-                        else
-                            so.SetSocketOption(SocketOptionLevel.IPv6, SocketOptionName.AddMembership,
-                                new IPv6MulticastOption(IPAddress.Parse("FF02::C")));
-                        break;
-                    default:
-                        throw new InvalidOperationException($"address is {localaddress.AddressFamily}");
-                }
-                so.Ttl = 5;
-                return so;
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Error when creating Socket.");
-                so?.Dispose();
-                return null;
-            }
-        }
-
 
         internal Socket CreateListenSocket(IPAddress localaddress, int port)
         {
@@ -70,7 +27,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 so.ExclusiveAddressUse = false;
                 so.EnableBroadcast = true;
-                so.MulticastLoopback = false;
+                so.MulticastLoopback = true;
                 switch (localaddress.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:
@@ -170,7 +127,7 @@ namespace NSPersonalCloud.LocalDiscovery
 
 
         internal void StartListen(Socket so, AddressFamily addressFamily  , Func<byte[], int, IPEndPoint, 
-            Task<bool>> socketListernCallback, Action<Socket> errorcb)
+            Task<bool>> socketListernCallback, Action<Socket,Exception> errorcb)
         {
             Task.Run(async () => {
                 var buffer = new byte[4096];
@@ -202,8 +159,8 @@ namespace NSPersonalCloud.LocalDiscovery
                     }
                     catch (Exception e)
                     {
-                        logger.LogError(e, "Exception in StartListen");
-                        errorcb?.Invoke(so);
+                        //logger.LogError(e, "Exception in StartListen");
+                        errorcb?.Invoke(so,e);
                         return;
                     }
                 }
@@ -212,21 +169,16 @@ namespace NSPersonalCloud.LocalDiscovery
 
 
 
-        public async Task SendTo(Socket so, IPEndPoint endp, byte[] data, int off, int count, int repeatcnt, int repeatmillisecondsDelay)
+        public async Task SendTo(Socket so, IPEndPoint endp, byte[] data, int off, int count)
         {
-            for (int i = 0; i < repeatcnt; i++)
+            try
             {
-                try
-                {
-                    await so.SendToAsync(new ArraySegment<byte>(data, off, count), SocketFlags.None, endp);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError(e, "Exception in so.SendToAsync");
-                }
-                await Task.Delay(repeatmillisecondsDelay);
+                await so.SendToAsync(new ArraySegment<byte>(data, off, count), SocketFlags.None, endp);
             }
-
+            catch (Exception e)
+            {
+                logger.LogError(e, "Exception in so.SendToAsync");
+            }
         }
     }
 }

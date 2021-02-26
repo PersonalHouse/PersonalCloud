@@ -14,6 +14,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Logging;
 
 using Newtonsoft.Json;
+using System.Threading;
 
 namespace NSPersonalCloud.LocalDiscovery
 {
@@ -41,12 +42,13 @@ namespace NSPersonalCloud.LocalDiscovery
         List<int> ifindices;
 
         readonly LocalNodesSocket _SockertLayer;
+        readonly Dictionary<string, long> searchNodeCache;
+        readonly Dictionary<string, long> responseNodeCache;
         readonly Dictionary<BigInteger, long> searchCache;
         readonly Dictionary<BigInteger, long> responseCache;
 
         readonly byte[] header;
         public static int UdpSendCount { get => 3; }
-        public static TimeSpan UdpSendDelay { get => TimeSpan.FromMilliseconds(100); }
 
 
         public Action<string> OnReceiveNodeInfo { get; internal set; }
@@ -60,7 +62,9 @@ namespace NSPersonalCloud.LocalDiscovery
             _SockertLayer = new LocalNodesSocket(lf.CreateLogger<LocalNodesSocket>());
             header = new byte[] { 44, 59, 48, (byte) Definition.CloudVersion, 0, 0, 0, };
             searchCache = new Dictionary<BigInteger, long>();
+            searchNodeCache = new Dictionary<string, long>();
             responseCache = new Dictionary<BigInteger, long>();
+            responseNodeCache = new Dictionary<string, long>();
 
 
             _StatusTimeStamp = DateTime.UtcNow.ToFileTime();
@@ -81,9 +85,9 @@ namespace NSPersonalCloud.LocalDiscovery
                 if (networkInterface.NetworkInterfaceType != NetworkInterfaceType.Ethernet &&
                     networkInterface.NetworkInterfaceType != NetworkInterfaceType.Wireless80211)
                     continue;
-                
+
                 var idx = GetAdapterIndex(networkInterface);
-                if (idx!=0)
+                if (idx != 0)
                 {
                     ips.Add(idx);
                 }
@@ -117,10 +121,10 @@ namespace NSPersonalCloud.LocalDiscovery
             return 0;
         }
 
-        private static List<Tuple<IPAddress, int>> GetLocalIPAddress()
+        private static List<(IPAddress, int)> GetLocalIPAddress()
         {
             var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
-            var ips = new List<Tuple<IPAddress, int>>();
+            var ips = new List<(IPAddress, int)>();
             foreach (var networkInterface in networkInterfaces)
             {
                 if (networkInterface.OperationalStatus != OperationalStatus.Up)
@@ -137,7 +141,7 @@ namespace NSPersonalCloud.LocalDiscovery
         }
 
 
-        private static void AddUnicastAddress(NetworkInterface networkInterface, List<Tuple<IPAddress, int>> ips)
+        private static void AddUnicastAddress(NetworkInterface networkInterface, List<(IPAddress, int)> ips)
         {
             var interfaceProperties = networkInterface.GetIPProperties();
             var unicastAddresses = interfaceProperties.UnicastAddresses;
@@ -191,7 +195,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 }
                 if (((ip.AddressFamily == AddressFamily.InterNetwork) || (ip.AddressFamily == AddressFamily.InterNetworkV6)))
                 {
-                    ips.Add(Tuple.Create(ip, index));
+                    ips.Add((ip, index));
                     continue;
                 }
             }
@@ -208,53 +212,57 @@ namespace NSPersonalCloud.LocalDiscovery
             System.Buffer.BlockCopy(array2, 0, rv, array1.Length, array2.Length);
             return rv;
         }
-        void SendMessage(byte[] messageData, int port)
+
+        void SendMessage(byte[] messageData, int[] ports)
         {
             var msg = Combine(header, messageData);
-
-            Task.Run(async()=>{
-                var ips = GetLocalIPAddress();
-                var solis = ips.Select(x => {
-                    return Tuple.Create(x.Item1, x.Item2, _SockertLayer.CreateClientSocket(x.Item1, x.Item2));
-                }).Where(x => x.Item3 != null);
-
-                foreach (var soinf in solis)
-                {
-                    try
+            var ips = GetLocalIPAddress();
+            var tosend = ips.Select(x => {
+                var endps = ports.Select(port => {
+                    if (x.Item1.AddressFamily == AddressFamily.InterNetwork)
                     {
-                        IPEndPoint endp;
-                        if (soinf.Item1.AddressFamily == AddressFamily.InterNetwork)
-                        {
-                            endp = new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
-                        }
-                        else
-                        {
-                            endp = new IPEndPoint(IPAddress.Parse("FF02::C"), port);
-                        }
-                        await _SockertLayer.SendTo(soinf.Item3, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
+                        return new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
                     }
-                    finally
+                    else
                     {
-                        soinf.Item3.Dispose();
+                        return new IPEndPoint(IPAddress.Parse("FF02::C"), port);
+                    }
+                });
+                return (_SockertLayer.CreateClientSocket(x.Item1, x.Item2), endps);
+            }).Where(x=>x.Item1!=null);
+            for (int i = 0; i < UdpSendCount; i++)
+            {
+                foreach(var s in tosend)
+                {
+                    foreach (var p in s.Item2)
+                    {
+                        try
+                        {
+                            _ = _SockertLayer.SendTo(s.Item1,p, msg, 0, msg.Length);
+                        }
+                        finally
+                        {
+                        }
                     }
                 }
-            });
+            }
+            foreach (var so in tosend)
+            {
+                try
+                {
+                    so.Item1.Dispose();
+                }
+                finally
+                {
+                }
+            }
         }
-        async Task SendMessage(Tuple<IPAddress, int, Socket> tuple, byte[] messageData, int port)
+        void SendMessage(Socket so, byte[] messageData, IPEndPoint endp)
         {
+
             var msg = Combine(header, messageData);
 
-            //var sso = _SockertLayer.CreateClientSocket(tuple.Item1, tuple.Item2);
-            IPEndPoint endp;
-            if (tuple.Item1.AddressFamily == AddressFamily.InterNetwork)
-            {
-                endp = new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
-            }
-            else
-            {
-                endp = new IPEndPoint(IPAddress.Parse("FF02::C"), port);
-            }
-            await _SockertLayer.SendTo(tuple.Item3, endp, msg, 0, msg.Length, UdpSendCount, (int) UdpSendDelay.TotalMilliseconds);
+            _ = _SockertLayer.SendTo(so, endp, msg, 0, msg.Length);
         }
 
 
@@ -271,54 +279,87 @@ namespace NSPersonalCloud.LocalDiscovery
 
         void SendAnnounceOrSearchResponse(string Ops)
         {
+            var ips = GetLocalIPAddress();
+            var ts = DateTime.UtcNow.ToFileTime().ToString(CultureInfo.InvariantCulture);
 
-            Task.Run(async () => {
-                var ips = GetLocalIPAddress();
-                var solis = ips.Select(x => {
-                    return Tuple.Create(x.Item1, x.Item2, _SockertLayer.CreateClientSocket(x.Item1, x.Item2));
-                }).Where(x => x.Item3 != null);
-
-                foreach (var ip in solis)
+            var tosend = ips.Select(ip => {
+                try
                 {
-                    try
+                    string url = null;
+                    if (ip.Item1.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
                     {
-                        string url = null;
-                        if (ip.Item1.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+                        url = $"http://[{ip.Item1}]:{_WebServerPort}/";
+                    }
+                    else
+                    {
+                        url = $"http://{ip.Item1}:{_WebServerPort}/";
+                    }
+
+                    var node = new NodeInfoInNet {
+                        NodeGuid = _ThisNodeID,
+                        PCVersion = Definition.CloudVersion.ToString(CultureInfo.InvariantCulture),
+                        TimeStamp = _StatusTimeStamp,
+                        Url = url,
+                    };
+                    var AnnounceString = JsonConvert.SerializeObject(node);
+
+                    using var ms = new MemoryStream();
+                    using var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true);
+                    sw.WriteLine(Ops);
+                    sw.WriteLine(ts);
+                    sw.WriteLine(AnnounceString);
+                    sw.WriteLine(_ThisNodeID);
+                    sw.Flush();
+
+                    var arr = ms.ToArray();
+
+
+                    var endps = _TargetPort.Select(port => {
+                        if (ip.Item1.AddressFamily == AddressFamily.InterNetwork)
                         {
-                            url = $"http://[{ip.Item1}]:{_WebServerPort}/";
+                            return new IPEndPoint(IPAddress.Parse("239.255.255.250"), port);
                         }
                         else
                         {
-                            url = $"http://{ip.Item1}:{_WebServerPort}/";
+                            return new IPEndPoint(IPAddress.Parse("FF02::C"), port);
                         }
+                    });
 
-                        var node = new NodeInfoInNet {
-                            NodeId = _ThisNodeID,
-                            PCVersion = Definition.CloudVersion.ToString(CultureInfo.InvariantCulture),
-                            TimeStamp = _StatusTimeStamp,
-                            Url = url,
-                        };
-                        var AnnounceString = JsonConvert.SerializeObject(node);
+                    return (_SockertLayer.CreateClientSocket(ip.Item1, ip.Item2), arr, endps);
+                }
+                finally
+                {
+                }
 
-                        using var ms = new MemoryStream();
-                        using var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true);
-                        sw.WriteLine(Ops);
-                        sw.WriteLine(DateTime.UtcNow.ToFileTime().ToString(CultureInfo.InvariantCulture));
-                        sw.WriteLine(AnnounceString);
-                        sw.Flush();
+            }).Where(x => x.Item1 != null);
 
-                        var arr = ms.ToArray();
-                        foreach (var port in _TargetPort)
+
+            for (int i = 0; i < UdpSendCount; i++)
+            {
+                foreach (var s in tosend)
+                {
+                    try
+                    {
+                        foreach (var endp in s.Item3)
                         {
-                            await SendMessage(ip, arr, port);
+                            SendMessage(s.Item1,s.Item2, endp);
                         }
                     }
                     finally
                     {
-                        ip.Item3.Dispose();
                     }
                 }
-            });
+                foreach (var so in tosend)
+                {
+                    try
+                    {
+                        so.Item1.Dispose();
+                    }
+                    finally
+                    {
+                    }
+                }
+            }
         }
 
         internal void SendSearch(int[] targetPort)
@@ -329,12 +370,10 @@ namespace NSPersonalCloud.LocalDiscovery
                 {
                     sw.WriteLine(NetworkPacketOperations.Search);
                     sw.WriteLine(DateTime.UtcNow.ToFileTime().ToString(CultureInfo.InvariantCulture));
+                    sw.WriteLine(_ThisNodeID);
                     sw.Flush();
                     var arr = ms.ToArray();
-                    foreach (var port in targetPort)
-                    {
-                        SendMessage(arr, port);
-                    }
+                    SendMessage(arr, targetPort);
                 }
             }
         }
@@ -349,6 +388,11 @@ namespace NSPersonalCloud.LocalDiscovery
             _TargetPort = targetPort;
             _ThisNodeID = thisnodeid;
 
+            InitListenSockets();
+        }
+        internal void Restart()
+        {
+            logger.LogInformation($"Restarting local udp socks. {_ThisNodeID}");
             InitListenSockets();
         }
 
@@ -388,7 +432,8 @@ namespace NSPersonalCloud.LocalDiscovery
                 }
                 SendSearch(_TargetPort);
                 SendAnnounce(false);
-            }else
+            }
+            else
             {//send ping
 
             }
@@ -396,17 +441,27 @@ namespace NSPersonalCloud.LocalDiscovery
 
         void CleanListenSockets()
         {
-            _ListenSocketV4?.Dispose();
-            _ListenSocketV4 = null;
-            _ListenSocketV6?.Dispose();
+            var so = _ListenSocketV4;
+            _ListenSocketV4 = null;//to prevent reinitializing
+            so?.Dispose();
+            so = _ListenSocketV6;
             _ListenSocketV6 = null;
+            so?.Dispose();
         }
         void InitListenSockets()
         {
             var idxes = GetLocalIfIndices();
             CleanListenSockets();
-            _ListenSocketV4 = GetOneSocket(IPAddress.Any, idxes);
-            _ListenSocketV6 = GetOneSocket(IPAddress.IPv6Any, idxes);
+            var so = GetOneSocket(IPAddress.Any, idxes);
+            if (so != null)
+            {
+                _ListenSocketV4 = so;
+            }
+            so = GetOneSocket(IPAddress.IPv6Any, idxes);
+            if (so != null)
+            {
+                _ListenSocketV6 = so;
+            }
             ifindices = idxes;
         }
 
@@ -418,7 +473,11 @@ namespace NSPersonalCloud.LocalDiscovery
 #pragma warning disable CA2000 // Dispose objects before losing scope
                 so = _SockertLayer.CreateListenSocket(addrany, _BindPort);
 #pragma warning restore CA2000 // Dispose objects before losing scope
-                _SockertLayer.JoinGroups(so, addrany.AddressFamily,idxes);
+                if (so == null)
+                {
+                    return so;
+                }
+                _SockertLayer.JoinGroups(so, addrany.AddressFamily, idxes);
                 _SockertLayer.StartListen(so, addrany.AddressFamily, SocketListernCallback, OnSocketError);
             }
             catch (Exception e)
@@ -431,14 +490,19 @@ namespace NSPersonalCloud.LocalDiscovery
             return so;
         }
 
-        private void OnSocketError(Socket so)
+        private void OnSocketError(Socket so, Exception e)
         {
             if (disposedValue)
             {
                 return;
             }
+            if ((so!=_ListenSocketV4)||(so != _ListenSocketV6))//socket has been reinitialized.
+            {
+                return;
+            }
             try
             {
+                logger.LogError(e, "Exception when receiving data");
                 InitListenSockets();
             }
             catch
@@ -450,12 +514,12 @@ namespace NSPersonalCloud.LocalDiscovery
 
 
 
-        private static void CleanCache(Dictionary<BigInteger, long> cache)
+        private static void CleanCache<T>(Dictionary<T, long> cache)
         {
             var cur = DateTime.UtcNow.ToFileTime();
             lock (cache)
             {
-                var keysToRemove = cache.Where(x => (cur - x.Value) > ((long) UdpSendDelay.TotalMilliseconds * 10000 * UdpSendCount * 10))
+                var keysToRemove = cache.Where(x => (cur - x.Value) > ( 10000000L * 60*60))//1 hour
                            .Select(kvp => kvp.Key)
                            .ToArray();
                 foreach (var key in keysToRemove)
@@ -465,7 +529,7 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
-        private static bool IsInCache(long ts, BigInteger key, Dictionary<BigInteger, long> cache)
+        private static bool IsInCache<T>(long ts, T key, Dictionary<T, long> cache)
         {
             CleanCache(cache);
 
@@ -490,11 +554,12 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
+
         private Task<bool> SocketListernCallback(byte[] buffer, int datasize, IPEndPoint endPoint)
         {
             try
             {
-                if (buffer[0]!=44 ||buffer[1]!=59|| buffer[2]!=48 )
+                if (buffer[0] != 44 || buffer[1] != 59 || buffer[2] != 48)
                 {
                     return Task.FromResult(true);
                 }
@@ -513,9 +578,20 @@ namespace NSPersonalCloud.LocalDiscovery
                         case NetworkPacketOperations.Search:
                         {
                             var ts = long.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
-                            if (IsInCache(ts, new BigInteger(endPoint.Address.GetAddressBytes()), searchCache))
+                            var nodeid = sr.ReadLine();
+                            if (!string.IsNullOrWhiteSpace(nodeid))
                             {
-                                return Task.FromResult(true);
+                                if (IsInCache(ts, nodeid, searchNodeCache))
+                                {
+                                    return Task.FromResult(true);
+                                }
+                            }
+                            else
+                            {//for compatible
+                                if (IsInCache(ts, new BigInteger(endPoint.Address.GetAddressBytes()), searchCache))
+                                {
+                                    return Task.FromResult(true);
+                                }
                             }
 
                             SendAnnounceOrSearchResponse(NetworkPacketOperations.Response);
@@ -525,15 +601,27 @@ namespace NSPersonalCloud.LocalDiscovery
                         case NetworkPacketOperations.Announce:
                         {
                             var ts = long.Parse(sr.ReadLine(), CultureInfo.InvariantCulture);
-                            if (IsInCache(ts, new BigInteger(endPoint.Address.GetAddressBytes()), responseCache))
-                            {
-                                return Task.FromResult(true);
-                            }
                             var strcontent = sr.ReadLine();
+                            var nodeid = sr.ReadLine();
+
+                            if (!string.IsNullOrWhiteSpace(nodeid))
+                            {
+                                if (IsInCache(ts, nodeid, responseNodeCache))
+                                {
+                                    return Task.FromResult(true);
+                                }
+                            }
+                            else
+                            {//for compatible
+                                if (IsInCache(ts, new BigInteger(endPoint.Address.GetAddressBytes()), responseCache))
+                                {
+                                    return Task.FromResult(true);
+                                }
+                            }
                             OnReceiveNodeInfo?.Invoke(strcontent);
                         }
                         break;
-                        case NetworkPacketOperations.Bye:               
+                        case NetworkPacketOperations.Bye:
                             break;
                         default:
                             break;

@@ -10,5 +10,6 @@ namespace NSPersonalCloud.LocalDiscovery
         public int MissCount;//How many times did this node miss the local node echo?
         public bool Fetched;
         public string Url;//The url could reach the device
+        public List<string> PcIds;//list of personal cloud's ids.
     }
 }

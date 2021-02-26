@@ -75,8 +75,8 @@ namespace LocalHosted
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
 
-                        SimapleShareCheckContent(pc2, 2,2);
-                        SimapleShareCheckContent(pc1, 2,2);
+                        SimpleShareCheckContent(pc2, 2,2);
+                        SimpleShareCheckContent(pc1, 2,2);
                     }
                 }
             }
@@ -248,22 +248,23 @@ namespace LocalHosted
                         srv2.StartService();
 
                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
-                        Thread.Sleep(1000);
+                        Thread.Sleep(2000);
                         l.LogInformation("before srv2.JoinPersonalCloud();");
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
-                        Thread.Sleep(1000);
+                        Thread.Sleep(2000);
 
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
+                        SimpleShareCheckContent(pc2, 2, 2);
+                        SimpleShareCheckContent(pc1, 2, 2);
                     }
                 }
             }
         }
 
         [Test]
-        public void ShareToMultiple()
+        public void CreateMultiple()
         {
-            int count = 100;
+            int count = 50;
+
             using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
             {
                 var l = loggerFactory.CreateLogger<LocalServiceTest>();
@@ -284,28 +285,65 @@ namespace LocalHosted
                     i => {
                         srv[i].TestSetUdpPort(ports[i], ports);
                         srv[i].StartService();
+                        l.LogInformation($"StartService {i}");
+                    });
+            }
+        }
+
+        [Test]
+        public void ShareToMultiple()
+        {
+            int count = 20;
+
+            using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
+            {
+                var l = loggerFactory.CreateLogger<LocalServiceTest>();
+                var t = DateTime.Now;
+
+                var inf = new HostPlatformInfo[count];
+                var srv = new PCLocalService[count];
+                var ports = new int[count];
+                var pcs = new PersonalCloud[count];
+                for (int i = 0; i < count; i++)
+                {
+                    inf[i] = new HostPlatformInfo();
+                    srv[i] = new PCLocalService(inf[i], loggerFactory, Getfs(inf[i].GetConfigFolder()), null);
+                    ports[i] = 2000 + i;
+                }
+
+                Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = 3 },
+                    i => {
+                        srv[i].TestSetUdpPort(ports[i], ports);
+                        Thread.Sleep(500);
+                        srv[i].StartService();
+                        l.LogInformation($"guid {srv[i].NodeId} is test{i}");
                     });
 
                 pcs[0] = srv[0].CreatePersonalCloud("test", "test0");
                 var ret = srv[0].SharePersonalCloud(pcs[0]);
                 l.LogInformation("srv0 is sharing");
-                Thread.Sleep(10000);
+                Thread.Sleep(2000* count/2);
 
-                Parallel.For(1, count,new ParallelOptions { MaxDegreeOfParallelism=2},
+                var fret = Parallel.For(1, count, new ParallelOptions { MaxDegreeOfParallelism = 2 },
                     i => {
-                    pcs[i] = srv[i].JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), $"test{i}").Result;
-                });
-                Thread.Sleep(300 * count);
+                        pcs[i] = srv[i].JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), $"test{i}").Result;
+                    });
+                while (!fret.IsCompleted)
+                {
+                    Thread.Sleep(500);
+                }
+                Thread.Sleep(5000 * count / 10);
+                l.LogInformation("Exam the result");
 
                 for (int i = 0; i < count; i++)
                 {
-                    SimapleShareCheckContent(pcs[i], 2, count);
+                    SimpleShareCheckContent(pcs[i], 2, count);
                 }
 
             }
         }
 
-        static private void SimapleShareCheckContent(PersonalCloud pc, int expectedCount, int nodes)
+        static private void SimpleShareCheckContent(PersonalCloud pc, int expectedCount, int nodes)
         {
             var fs2 = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
             Assert.AreEqual(nodes, fs2.Count);
@@ -333,9 +371,9 @@ namespace LocalHosted
                     {
                         var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
-                        srv.StopNetwork();
+                        srv.NetworkMayChanged(false);
                         Thread.Sleep(100);
-                        srv.StartNetwork(true);
+                        srv.NetworkMayChanged(true);
                         Thread.Sleep(200);
                     }
                 }
@@ -361,7 +399,7 @@ namespace LocalHosted
                     {
                         var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
-                        srv.StartNetwork(false);
+                        srv.NetworkMayChanged(false);
                         Thread.Sleep(200);
                     }
                     for (int i = 0; i < 10; i++)
@@ -369,7 +407,7 @@ namespace LocalHosted
                         var lis = pc.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Assert.AreEqual(1, lis.Count);
                         srv.TestStopWebServer();
-                        srv.StartNetwork(false);
+                        srv.NetworkMayChanged(false);
                         Thread.Sleep(200);
                     }
                 }
@@ -377,56 +415,56 @@ namespace LocalHosted
         }
 #endif//DEBUG
 
-        [Test]
-        public void TestStopNetwork()
-        {
-            using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
-            {
-                var l = loggerFactory.CreateLogger<LocalServiceTest>();
-                var t = DateTime.Now;
-
-                var ran = new Random();
-                int nport1 = ran.Next(1000, 10000);
-                int nport2 = ran.Next(1000, 10000);
-
-                l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
-                var inf1 = new HostPlatformInfo();
-                using (var srv1 = new PCLocalService(inf1,
-                 loggerFactory, Getfs(inf1.GetConfigFolder()), null))
-                {
-                    srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
-                    srv1.StartService();
-                    var pc1 = srv1.CreatePersonalCloud("test", "test1");
-                    var ret = srv1.SharePersonalCloud(pc1);
-
-                    Thread.Sleep(1000);
-
-                    var inf2 = new HostPlatformInfo();
-                    using (var srv2 = new PCLocalService(inf2,
-                    loggerFactory, Getfs(inf2.GetConfigFolder()), null))
-                    {
-                        srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
-                        l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
-                        srv2.StartService();
-
-                        //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
-                        Thread.Sleep(1000);
-                        l.LogInformation("before srv2.JoinPersonalCloud();");
-                        var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
-                        Thread.Sleep(1000);
-
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
-
-                        srv2.StopNetwork();
-                        SimapleShareCheckContent(pc2, 0, 0);
-                        srv2.StartNetwork(true);
-                        Thread.Sleep(3000);
-                        SimapleShareCheckContent(pc2, 2, 2);
-                    }
-                }
-            }
-        }
+//         [Test]
+//         public void TestStopNetwork()
+//         {
+//             using (var loggerFactory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Trace).AddFile("Logs/{Date}.txt", LogLevel.Trace)))
+//             {
+//                 var l = loggerFactory.CreateLogger<LocalServiceTest>();
+//                 var t = DateTime.Now;
+// 
+//                 var ran = new Random();
+//                 int nport1 = ran.Next(1000, 10000);
+//                 int nport2 = ran.Next(1000, 10000);
+// 
+//                 l.LogInformation($"port 1 is {nport1}  port 2 is {nport2}");
+//                 var inf1 = new HostPlatformInfo();
+//                 using (var srv1 = new PCLocalService(inf1,
+//                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
+//                 {
+//                     srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
+//                     srv1.StartService();
+//                     var pc1 = srv1.CreatePersonalCloud("test", "test1");
+//                     var ret = srv1.SharePersonalCloud(pc1);
+// 
+//                     Thread.Sleep(1000);
+// 
+//                     var inf2 = new HostPlatformInfo();
+//                     using (var srv2 = new PCLocalService(inf2,
+//                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
+//                     {
+//                         srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
+//                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
+//                         srv2.StartService();
+// 
+//                         //l.LogInformation((DateTime.Now - t).TotalSeconds.ToString());
+//                         Thread.Sleep(1000);
+//                         l.LogInformation("before srv2.JoinPersonalCloud();");
+//                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
+//                         Thread.Sleep(1000);
+// 
+//                         SimpleShareCheckContent(pc2, 2, 2);
+//                         SimpleShareCheckContent(pc1, 2, 2);
+// 
+//                         srv2.StopNetwork();
+//                         SimpleShareCheckContent(pc2, 0, 0);
+//                         srv2.StartNetwork(true);
+//                         Thread.Sleep(3000);
+//                         SimpleShareCheckContent(pc2, 2, 2);
+//                     }
+//                 }
+//             }
+//         }
 
 #if DEBUG
         [Test]
@@ -446,7 +484,7 @@ namespace LocalHosted
                 using (var srv1 = new PCLocalService(inf1,
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
-                    srv1.TestSetReannounceTime(3 * 1000);
+                    srv1.TestSetReannounceTime(1 * 1000);
                     srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
                     var pc1 = srv1.CreatePersonalCloud("test", "test1");
@@ -458,7 +496,7 @@ namespace LocalHosted
                     using (var srv2 = new PCLocalService(inf2,
                     loggerFactory, Getfs(inf2.GetConfigFolder()), null))
                     {
-                        srv2.TestSetReannounceTime(3 * 1000);
+                        srv2.TestSetReannounceTime(1 * 1000);
                         srv2.TestSetUdpPort(nport2, new[] { nport2, nport1 });
                         l.LogInformation($"before srv2.StartService(),port {srv2.ServerPort}");
                         srv2.StartService();
@@ -467,17 +505,19 @@ namespace LocalHosted
                         Thread.Sleep(1000);
                         l.LogInformation("before srv2.JoinPersonalCloud();");
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
-                        Thread.Sleep(1000);
+                        srv1.StopSharePersonalCloud(pc1);
+                        Thread.Sleep(2000);
 
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
+                        SimpleShareCheckContent(pc2, 2, 2);
+                        SimpleShareCheckContent(pc1, 2, 2);
 
-                        srv2.StopNetwork();
                         srv2.Dispose();
-                        Thread.Sleep(10000);
+                        l.LogInformation($"srv2 disposed");
+
+                        Thread.Sleep(20000);
                         _= pc1.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
-                        Thread.Sleep(1000);
-                        SimapleShareCheckContent(pc1, 2, 1);
+                        Thread.Sleep(3000);
+                        SimpleShareCheckContent(pc1, 2, 1);
                     }
                 }
             }
@@ -500,7 +540,7 @@ namespace LocalHosted
                 using (var srv1 = new PCLocalService(inf1,
                  loggerFactory, Getfs(inf1.GetConfigFolder()), null))
                 {
-                    srv1.TestSetReannounceTime(3 * 1000);
+                    srv1.TestSetReannounceTime(1000);
                     srv1.TestSetUdpPort(nport1, new[] { nport2, nport1 });
                     srv1.StartService();
                     var pc1 = srv1.CreatePersonalCloud("test", "test1");
@@ -523,23 +563,22 @@ namespace LocalHosted
                         var pc2 = srv2.JoinPersonalCloud(int.Parse(ret, CultureInfo.InvariantCulture), "test2").Result;
                         Thread.Sleep(1000);
 
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
+                        SimpleShareCheckContent(pc2, 2, 2);
+                        SimpleShareCheckContent(pc1, 2, 2);
 
                         Thread.Sleep(10000);
                         
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
+                        SimpleShareCheckContent(pc2, 2, 2);
+                        SimpleShareCheckContent(pc1, 2, 2);
 
-                        SimapleShareCheckContent(pc2, 2, 2);
-                        SimapleShareCheckContent(pc1, 2, 2);
+                        SimpleShareCheckContent(pc2, 2, 2);
+                        SimpleShareCheckContent(pc1, 2, 2);
 
-                        srv2.StopNetwork();
                         srv2.Dispose();
-                        Thread.Sleep(10000);
+                        Thread.Sleep(20000);
                         _ = pc1.RootFS.EnumerateChildrenAsync("/").AsTask().Result;
                         Thread.Sleep(1000);
-                        SimapleShareCheckContent(pc1, 2, 1);
+                        SimpleShareCheckContent(pc1, 2, 1);
                     }
                 }
             }

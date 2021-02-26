@@ -5,14 +5,14 @@ namespace NSPersonalCloud.LocalDiscovery
 {
     class NodeInfoInNet : IEquatable<NodeInfoInNet>
     {
-        public string NodeId;
+        public string NodeGuid;
         public string PCVersion;
         public long TimeStamp;//sender StatusTimeStamp, for versioning
         public string Url;
 
         public override int GetHashCode()
         {
-            return NodeId.GetHashCode() & TimeStamp.GetHashCode() & Url.GetHashCode();
+            return NodeGuid.GetHashCode() & TimeStamp.GetHashCode() & Url.GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -23,7 +23,7 @@ namespace NSPersonalCloud.LocalDiscovery
 
         public bool Equals(NodeInfoInNet other)
         {
-            if (NodeId != other.NodeId)
+            if (NodeGuid != other.NodeGuid)
             {
                 return false;
             }

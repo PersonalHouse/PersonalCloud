@@ -305,7 +305,6 @@ namespace NSPersonalCloud
                         Url = ninfo.Url,
                         Name = name
                     };
-                    logger.LogTrace($"Adding node {newinf.Name} {newinf.NodeGuid}");
                     CachedNodes.Add(newinf);
                     OnCachedNodesChange();
                     updated = true;

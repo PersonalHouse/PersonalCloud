@@ -41,7 +41,6 @@ namespace NSPersonalCloud
         string ExtraWebPath;
 
         LocalDiscovery.LocalNodeRecords _LocalNodes;
-        HttpClient httpclient;
 
         public int ServerPort { get; private set; }
 
@@ -73,11 +72,9 @@ namespace NSPersonalCloud
             logger = loggerFactory.CreateLogger("PCLocalService");
 #pragma warning restore CA1062 // Validate arguments of public methods
 
-            httpclient = new HttpClient();
-            httpclient.Timeout = TimeSpan.FromSeconds(10);
 
             _LocalNodes = new LocalDiscovery.LocalNodeRecords(logfac);
-            _LocalNodes.OnNodeAdded += LocalNet_OnNodeAdded;
+            _LocalNodes.OnNodeUpdate += LocalNet_OnNodeUpdate;
             _LocalNodes.OnError += NodeDiscovery_OnError;
 
             var cfg = LoadConfiguration();
@@ -95,13 +92,12 @@ namespace NSPersonalCloud
 
         }
 
-        private void LocalNet_OnNodeAdded(object sender, LocalDiscovery.LocalNodeUpdateEventArgs e)
+        private void LocalNet_OnNodeUpdate(object sender, LocalDiscovery.LocalNodeUpdateEventArgs e)
         {
             var pcs = PersonalClouds;
             foreach (var pc in pcs)
             {
                 _ = pc.OnLocalNodeUpdate(e.nodeInfo, e.PCinfos).ConfigureAwait(false);
-                //logger.LogTrace($"{ServerPort}:OnNodeUpdate {pc.NodeDisplayName}");
             }
         }
 
@@ -425,7 +421,7 @@ namespace NSPersonalCloud
                     }
                     if (updatenet)
                     {
-                        _LocalNodes.SendCloudUpdateEvent();
+                        _LocalNodes.TellNetworkIveChanged();
                     }
                 }
 
@@ -547,7 +543,7 @@ namespace NSPersonalCloud
 
             EnsureWebServerStarted();
             EnsureLocalNetStarted();
-            _LocalNodes.SendCloudUpdateEvent();
+            _LocalNodes.TellNetworkIveChanged();
 
             return pc;
         }
@@ -558,7 +554,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             var str = pc.GenerateShareCode();
-            _LocalNodes.SendCloudUpdateEvent();
+            _LocalNodes.TellNetworkIveChanged();
             return str;
         }
 
@@ -569,7 +565,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             pc.CurrentShareCode = null;
-            _LocalNodes.SendCloudUpdateEvent();
+            _LocalNodes.TellNetworkIveChanged();
             return;
         }
 
@@ -588,7 +584,7 @@ namespace NSPersonalCloud
                 var ts = DateTime.UtcNow.ToFileTime();
                 data = BitConverter.GetBytes(ts + code);
                 var newhcode = xxHash64.ComputeHash(data, data.Length);
-                var pcresp = await httpclient.GetAsync(new Uri(new Uri(spc.Url), $"clouds/{spc.PCId}?ts={ts}&hash={newhcode}")).ConfigureAwait(false);
+                var pcresp = await _LocalNodes.GetNodeWebResp(new Uri(new Uri(spc.Url), $"clouds/{spc.PCId}?ts={ts}&hash={newhcode}")).ConfigureAwait(false);
                 if (pcresp.IsSuccessStatusCode)
                 {
                     var str = await pcresp.Content.ReadAsStringAsync().ConfigureAwait(false);
@@ -607,8 +603,8 @@ namespace NSPersonalCloud
                         _PersonalClouds.Add(pc);
                     }
                     SavePCList();
-                    _LocalNodes.SendCloudUpdateEvent();
-                    logger.LogDebug($"Join {pc.DisplayName}");
+                    _LocalNodes.TellNetworkIveChanged();
+                    _LocalNodes.SyncPCNodes(pc.Id);
                     return pc;
                 }
                 throw new InvalidDeviceResponseException();
@@ -623,7 +619,7 @@ namespace NSPersonalCloud
                 _PersonalClouds.Remove(pc);
             }
             SavePCList();
-            _LocalNodes.SendCloudUpdateEvent();
+            _LocalNodes.TellNetworkIveChanged();
         }
 
         #endregion
@@ -636,57 +632,56 @@ namespace NSPersonalCloud
 
             LoadApps();
         }
-
-
-        //call StartNetwork after network changed
-        //forcerestart will make current http request failed.
-        public void StartNetwork(bool forcerestart)
-        {
-            if (forcerestart || (WebServer == null) || (WebServer.State != WebServerState.Listening) || (_LocalNodes.State != LocalDiscovery.NodeDiscoveryState.Listening))
-            {
-                InitWebServer();
-                _LocalNodes?.Dispose();
-                _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
-            }
-            else
-            {
-                using var cts = new CancellationTokenSource(500);
-                try
-                {
-                    using var resp = httpclient.GetAsync($"http://127.0.0.1:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
-                }
-                catch
-                {
-                    InitWebServer();
-                    _LocalNodes?.Dispose();
-                    _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
-                }
-            }
-
-            _LocalNodes.Start(ServerPort, NodeId);
-        }
+// 
+// 
+//         public void StartNetwork(bool forcerestart)
+//         {
+//             if (forcerestart || (WebServer == null) || (WebServer.State != WebServerState.Listening) || (_LocalNodes.State != LocalDiscovery.NodeDiscoveryState.Listening))
+//             {
+//                 InitWebServer();
+//                 _LocalNodes?.Dispose();
+//                 _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
+//             }
+//             else
+//             {
+//                 using var cts = new CancellationTokenSource(500);
+//                 try
+//                 {
+//                     using var resp = httpclient.GetAsync($"http://127.0.0.1:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
+//                 }
+//                 catch
+//                 {
+//                     InitWebServer();
+//                     _LocalNodes?.Dispose();
+//                     _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
+//                 }
+//             }
+// 
+//             _LocalNodes.Start(ServerPort, NodeId);
+//         }
+// 
+//         public void StopNetwork()
+//         {
+//             _LocalNodes?.Dispose();
+//             _LocalNodes = null;
+//             WebServer?.Listener?.Stop();
+//             WebServer?.Dispose();
+//             WebServer = null;
+//         }
 
         //republish cloud info to network
         //if force equals true, Sockets will be reinitialized.
-//         public void NetworkRefeshNodes(bool force=false)
-//         {
-//             _LocalNodes.StartPublish(ServerPort, NodeId,force);
-//             _LocalNodes.StartSearch();
-//         }
+        //         public void NetworkRefeshNodes(bool force=false)
+        //         {
+        //             _LocalNodes.StartPublish(ServerPort, NodeId,force);
+        //             _LocalNodes.StartSearch();
+        //         }
 
         public void NetworkMayChanged(bool besure)
         {
             _LocalNodes.LocalNetworkMayChanged(besure);
         }
 
-        public void StopNetwork()
-        {
-            _LocalNodes?.Dispose();
-            _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
-            WebServer?.Listener?.Stop();
-            WebServer?.Dispose();
-            WebServer = null;
-        }
 
 
 
@@ -701,8 +696,6 @@ namespace NSPersonalCloud
                 WebServer = null;
                 _LocalNodes?.Dispose();
                 _LocalNodes = null;
-                httpclient?.Dispose();
-                httpclient = null;
                 FileSystem?.Dispose();
                 FileSystem = null;
             }

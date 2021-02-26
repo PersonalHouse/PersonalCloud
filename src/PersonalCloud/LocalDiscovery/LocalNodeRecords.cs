@@ -47,17 +47,17 @@ namespace NSPersonalCloud.LocalDiscovery
     {
         public int BindPort;
         public int[] TargetPort;
-        public int RepublicTime = 2 * 60 * 1000;
 
         public NodeDiscoveryState State { get; internal set; }
         public List<LocalNodeInfo> LocalNodes;
         public readonly List<NodeShareInfo> sharedPCs;
 
         public event EventHandler<ErrorCode> OnError;
-        public event EventHandler<LocalNodeUpdateEventArgs> OnNodeAdded;//node guid,url
+        public event EventHandler<LocalNodeUpdateEventArgs> OnNodeUpdate;//node guid,url
 
         readonly ILoggerFactory loggerFactory;
         readonly ILogger logger;
+        public int RepublicTime = 2 * 60 * 1000;
         System.Threading.Timer _BroadcastingTimer;
 
         LocalNodesNetwork _Network;
@@ -108,12 +108,12 @@ namespace NSPersonalCloud.LocalDiscovery
             rxduration = new Subject<Unit>();
             ReceivedNodeInfosSubject = new Subject<NodeInfoInNet>();
 
-            ReceivedNodeInfosSubject.DistinctUntilChanged().GroupByUntil(x => x.NodeId, x => rxduration.AsObservable()).Subscribe(
+            ReceivedNodeInfosSubject.DistinctUntilChanged().GroupByUntil(x => x.NodeGuid, x => rxduration.AsObservable()).Subscribe(
                 g => {
                     g.Distinct().ObserveOn(TaskPoolScheduler.Default).Subscribe(
                         NodeInfoForOneNode,
                         ex => {
-                            logger.LogError("ReceivedNodeInfosSubjectGroupBy.Subscribe OnError {0}", ex.Message);
+                            logger.LogError(ex,"ReceivedNodeInfosSubjectGroupBy.Subscribe OnError");
                         },
                         () => {
                             lock (LocalNodes)
@@ -134,21 +134,16 @@ namespace NSPersonalCloud.LocalDiscovery
                     //logger.LogInformation("ReceivedNodeInfosSubjectGroupBy OnError {0}", ex.Message);
                 });
         }
-
         private void NodeInfoForOneNode(NodeInfoInNet x)
         {
-            if (x.NodeId == ThisNodeID)
-            {
-                return;
-            }
             LocalNodeInfo nod = null;
             lock (LocalNodes)
             {
-                nod = LocalNodes.FirstOrDefault(y => y.NodeId == x.NodeId);
+                nod = LocalNodes.FirstOrDefault(y => y.NodeId == x.NodeGuid);
                 if (nod == null)
                 {
                     nod = new LocalNodeInfo {
-                        NodeId = x.NodeId,
+                        NodeId = x.NodeGuid,
                         Fetched = false,
                         PCVersion = x.PCVersion,
                         StatusTimeStamp = x.TimeStamp,
@@ -182,11 +177,12 @@ namespace NSPersonalCloud.LocalDiscovery
                 LocalNode = nod,
                 FinishTask = new TaskCompletionSource<int>()
             };
+
             fetchCloudInfo.Post(t);
-            t.FinishTask.Task.Wait();
+            t.FinishTask.Task.Wait(10*1000);
         }
 
-        private async Task<HttpResponseMessage> GetNodeWebResp(Uri turi)
+        public async Task<HttpResponseMessage> GetNodeWebResp(Uri turi)
         {
             const int retrycnt = 2;//Too many retries may block the queue.
             for (int i = 0; i < retrycnt; i++)
@@ -197,10 +193,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 }
                 catch (Exception)
                 {
-                    if (i < (retrycnt - 1))
-                    {
-                        await Task.Delay(100).ConfigureAwait(false);
-                    }
+                    await Task.Delay(100 * retrycnt);
                 }
 
             }
@@ -217,13 +210,10 @@ namespace NSPersonalCloud.LocalDiscovery
                 var resp = await GetNodeWebResp(turi).ConfigureAwait(false);
                 if ((resp != null) && resp.IsSuccessStatusCode)
                 {
-                    logger.LogTrace($"Discovered {turi}");
                     qinfo.LocalNode.Url = qinfo.Node.Url;
                     qinfo.LocalNode.Fetched = true;
-
                     await OnNewNodeDiscovered(qinfo.LocalNode, resp).ConfigureAwait(false);
 
-                    qinfo.FinishTask.SetResult(0);
                 }
                 else
                 {//do nothing
@@ -236,6 +226,9 @@ namespace NSPersonalCloud.LocalDiscovery
                 {
                     logger.LogError(exception, $"Error getting info for node: {node.Url}");
                 }
+            }finally
+            {
+                qinfo.FinishTask?.SetResult(0);
             }
         }
 
@@ -249,8 +242,9 @@ namespace NSPersonalCloud.LocalDiscovery
             }
             try
             {
+                node.PcIds = res.Select(x => x.Id).ToList();
                 var info = new LocalNodeUpdateEventArgs() { nodeInfo = node, PCinfos = res };
-                OnNodeAdded?.Invoke(this, info);
+                OnNodeUpdate?.Invoke(this, info);
             }
             catch (Exception exception)
             {
@@ -311,6 +305,16 @@ namespace NSPersonalCloud.LocalDiscovery
                     var node = LocalNodes[i];
                     if (node.MissCount >= 15)//to compatible with old version. Could change to 5 after 2021.12.31
                     {
+                        logger.LogInformation($"Removing expired node:{node.NodeId}");
+                        Task.Run(() => {
+                            if (node.NodeId == ThisNodeID)
+                            {
+                                _Network.Restart();
+                            }
+
+                            FireNodeRemovingEvent(node);
+                        });
+
                         LocalNodes.RemoveAt(i);//todo: ping the node and then remove it
                         continue;
                     }
@@ -326,6 +330,19 @@ namespace NSPersonalCloud.LocalDiscovery
             ++durationCount;
         }
 
+        private void FireNodeRemovingEvent(LocalNodeInfo node)
+        {
+            try
+            {
+                var info = new LocalNodeUpdateEventArgs() { nodeInfo = node, PCinfos = new List<SSDPPCInfo>() };
+                OnNodeUpdate?.Invoke(this, info);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, $"Error getting info for node: {node.Url}");
+            }
+        }
+
 
         #endregion
 
@@ -333,12 +350,24 @@ namespace NSPersonalCloud.LocalDiscovery
 
         private void OnBroadcastingTimer(object state)
         {
-            logger.LogInformation("OnBroadcastingTimer");
+            logger.LogTrace("OnLocalNetTimer");
             try
             {
                 CleanExpiredLocalNodes();
-                _Network.EnsureListenSocketFine();
-                _Network.SendAnnounce(false);
+                if (disposedValue)
+                {
+                    return;
+                }
+                _Network?.EnsureListenSocketFine();
+                if (disposedValue)
+                {
+                    return;
+                }
+                _Network?.SendAnnounce(false);
+                if (disposedValue)
+                {
+                    return;
+                }
             }
             catch (Exception exception)
             {
@@ -352,6 +381,30 @@ namespace NSPersonalCloud.LocalDiscovery
         }
 
 
+        bool IsNodeFetched(NodeInfoInNet x)
+        {
+            lock (LocalNodes)
+            {
+                var nod = LocalNodes.FirstOrDefault(y => y.NodeId == x.NodeGuid);
+                if (nod != null)
+                {
+                    Interlocked.Exchange(ref nod.MissCount, 0);
+                    if (nod.StatusTimeStamp > x.TimeStamp)
+                    {
+                        return true;
+                    }
+                    if (nod.StatusTimeStamp == x.TimeStamp)
+                    {
+                        if (nod.Fetched)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
         private void OnReceiveNodeInfo(string nodeinfostr)
         {
             try
@@ -362,12 +415,15 @@ namespace NSPersonalCloud.LocalDiscovery
                     return;
                 }
                 var nodinfo = JsonConvert.DeserializeObject<NodeInfoInNet>(nodeinfostr);
-                if (string.IsNullOrWhiteSpace(nodinfo.NodeId))
+                if (string.IsNullOrWhiteSpace(nodinfo.NodeGuid))
                 {
                     logger.LogError("LocalNodeRecords:Receive malformed nodeinfo.");
                     return;
                 }
-                ReceivedNodeInfosSubject.OnNext(nodinfo);
+                if (!IsNodeFetched(nodinfo))
+                {
+                    ReceivedNodeInfosSubject.OnNext(nodinfo);
+                }
             }
             catch (Exception e)
             {
@@ -408,17 +464,39 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
-        public void SendCloudUpdateEvent()
+
+        public void TellNetworkIveChanged()
         {
             _Network.SendAnnounce(true);
         }
+        public void SyncPCNodes(string PcId)
+        {
+            List<LocalNodeInfo> nods;
+            lock (LocalNodes)
+            {
+                nods = LocalNodes.Where(x=>x.PcIds.Contains(PcId)).ToList();
+            }
+
+            foreach (var nod in nods)
+            {
+                var t = new FetchQueueItem {
+                    Node = new NodeInfoInNet { NodeGuid = nod.NodeId, PCVersion = nod.PCVersion, TimeStamp = nod.StatusTimeStamp, Url = nod.Url },
+                    LocalNode = nod,
+                    FinishTask = null
+                };
+                fetchCloudInfo.Post(t);
+            }
+        }
+
 
         internal void LocalNetworkMayChanged(bool besure)
         {
             if(besure)
             {
+                _Network.Restart();
 
-            }else
+            }
+            else
             {
                 _Network.EnsureListenSocketFine();
             }
@@ -429,89 +507,6 @@ namespace NSPersonalCloud.LocalDiscovery
         #endregion
 
 
-        #region List local ips
-
-        private static List<Tuple<IPAddress, int>> GetLocalIPAddress()
-        {
-            var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
-            var ips = new List<Tuple<IPAddress, int>>();
-            foreach (var networkInterface in networkInterfaces)
-            {
-                if (networkInterface.OperationalStatus != OperationalStatus.Up)
-                    continue;
-                if (!networkInterface.SupportsMulticast)
-                    continue;
-                if (networkInterface.NetworkInterfaceType != NetworkInterfaceType.Ethernet &&
-                    networkInterface.NetworkInterfaceType != NetworkInterfaceType.Wireless80211)
-                    continue;
-
-                AddUnicastAddress(networkInterface, ips);
-            }
-            return ips;
-        }
-
-
-        private static void AddUnicastAddress(NetworkInterface networkInterface, List<Tuple<IPAddress, int>> ips)
-        {
-            var interfaceProperties = networkInterface.GetIPProperties();
-            var unicastAddresses = interfaceProperties.UnicastAddresses;
-
-            int index = 0;
-            try
-            {
-                var props = interfaceProperties.GetIPv4Properties();
-                index = props.Index;
-            }
-            catch
-            {
-                try
-                {
-                    var props = interfaceProperties.GetIPv6Properties();
-                    index = props.Index;
-                }
-                catch { }
-            }
-
-            foreach (var ipAddressInfo in unicastAddresses)
-            {
-                var ip = ipAddressInfo.Address;
-                try
-                {
-                    if (ipAddressInfo.SuffixOrigin == System.Net.NetworkInformation.SuffixOrigin.Random)
-                    {
-                        //continue;
-                    }
-                    if (ipAddressInfo.SuffixOrigin == System.Net.NetworkInformation.SuffixOrigin.WellKnown)
-                    {
-                        continue;
-                    }
-//                     if (ipAddressInfo.PrefixOrigin == PrefixOrigin.Other )
-//                     {
-//                         continue;
-//                     }
-                }
-                catch (NotImplementedException)
-                {
-                    try
-                    {
-                        if (IPAddress.IsLoopback(ip))
-                        {
-                            continue;
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-                if (((ip.AddressFamily == AddressFamily.InterNetwork) || (ip.AddressFamily == AddressFamily.InterNetworkV6)))
-                {
-                    ips.Add(Tuple.Create(ip, index));
-                    continue;
-                }
-            }
-
-        }
-        #endregion
 
         #region disposable
 
@@ -521,11 +516,14 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             if (!disposedValue)
             {
+                logger.LogInformation("Take down LocalNodeRecords");
+                disposedValue = true;
                 if (disposing)
                 {
                     _Network?.Dispose();
                     _Network = null;
 
+                    _BroadcastingTimer.Change(Timeout.Infinite, Timeout.Infinite);
                     _BroadcastingTimer?.Dispose();
                     _BroadcastingTimer = null;
                     ReceivedNodeInfosSubject?.Dispose();
@@ -536,9 +534,6 @@ namespace NSPersonalCloud.LocalDiscovery
                     httpclient = null;
                 }
 
-                // TODO: free unmanaged resources (unmanaged objects) and override finalizer
-                // TODO: set large fields to null
-                disposedValue = true;
             }
         }
 

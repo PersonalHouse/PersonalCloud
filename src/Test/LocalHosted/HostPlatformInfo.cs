@@ -69,9 +69,9 @@ namespace LocalHosted
         {
         }
 
-        public List<ValueTuple<string, string>> GetApp(string appid)
+        public List<(string, string)> GetApp(string appid)
         {
-            return new List<ValueTuple<string, string>>();
+            return new List<(string, string)>();
         }
     }
 }
