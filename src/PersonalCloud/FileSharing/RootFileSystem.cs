@@ -103,7 +103,7 @@ namespace NSPersonalCloud.RootFS
             if (path == "/" || path == "/*")
             {
                 return new ValueTask<FileSystemEntry>(new FileSystemEntry {
-                    Name = "Personal Cloud",
+                    Name = "Personal House",
                     Attributes = FileAttributes.Directory
                 });
             }

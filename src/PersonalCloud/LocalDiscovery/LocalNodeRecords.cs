@@ -494,12 +494,13 @@ namespace NSPersonalCloud.LocalDiscovery
             if(besure)
             {
                 _Network.Restart();
-
             }
             else
             {
                 _Network.EnsureListenSocketFine();
             }
+            _Network.SendSearch(TargetPort);
+            _Network.SendAnnounce(false);
         }
 
 

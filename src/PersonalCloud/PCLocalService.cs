@@ -37,7 +37,6 @@ namespace NSPersonalCloud
         readonly ILogger logger;
 
         private IConfigStorage ConfigStorage { get; }
-        public Zio.IFileSystem FileSystem { get; set; }
         string ExtraWebPath;
 
         LocalDiscovery.LocalNodeRecords _LocalNodes;
@@ -59,14 +58,32 @@ namespace NSPersonalCloud
         WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
-        public ShareController CreateShareController() => new ShareController(FileSystem, this);
+        public ShareController CreateShareController() => new ShareController(_FileSystem, this);
+        Zio.IFileSystem _FileSystem;
+        public Zio.IFileSystem FileSystem
+        {
+            get=> _FileSystem;
+            set {
+                if (_FileSystem != null)
+                {
+                    try
+                    {
+                        _FileSystem.Dispose();
+                    }
+                    catch{}
+                    _FileSystem = null;
+                }
+                _FileSystem = value;
+                InitWebServer();
+            }
+        }
 
         public PCLocalService(IConfigStorage configStorage, ILoggerFactory logfac, Zio.IFileSystem fileSystem, string extraWebPath)
         {
             ExtraWebPath = extraWebPath;
 
             ConfigStorage = configStorage;
-            FileSystem = fileSystem;
+            _FileSystem = fileSystem;
             loggerFactory = logfac;
 #pragma warning disable CA1062 // Validate arguments of public methods
             logger = loggerFactory.CreateLogger("PCLocalService");
@@ -682,6 +699,10 @@ namespace NSPersonalCloud
             _LocalNodes.LocalNetworkMayChanged(besure);
         }
 
+        public void TellNetworkIveChanged()
+        {
+            _LocalNodes.TellNetworkIveChanged();
+        }
 
 
 
@@ -696,8 +717,8 @@ namespace NSPersonalCloud
                 WebServer = null;
                 _LocalNodes?.Dispose();
                 _LocalNodes = null;
-                FileSystem?.Dispose();
-                FileSystem = null;
+                _FileSystem?.Dispose();
+                _FileSystem = null;
             }
         }
 

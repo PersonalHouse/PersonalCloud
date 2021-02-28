@@ -392,7 +392,8 @@ namespace NSPersonalCloud.LocalDiscovery
         }
         internal void Restart()
         {
-            logger.LogInformation($"Restarting local udp socks. {_ThisNodeID}");
+            logger.LogInformation($"Restarting local network. {_ThisNodeID}");
+            ++_StatusTimeStamp;
             InitListenSockets();
         }
 
