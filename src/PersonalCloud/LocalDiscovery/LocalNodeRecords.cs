@@ -171,6 +171,10 @@ namespace NSPersonalCloud.LocalDiscovery
                     //do not set LocalNodeInfo.Url in this block
                 }
             }
+            if (nod.NodeId==ThisNodeID)//self
+            {
+                nod.Url=x.Url= $"http://localhost:{WebServerPort}/";
+            }
 
             var t = new FetchQueueItem {
                 Node = x,
