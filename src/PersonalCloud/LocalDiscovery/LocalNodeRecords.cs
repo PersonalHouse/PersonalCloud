@@ -303,7 +303,12 @@ namespace NSPersonalCloud.LocalDiscovery
                 for (int i = 0; i < LocalNodes.Count; )
                 {
                     var node = LocalNodes[i];
-                    if (node.MissCount >= 15)//to compatible with old version. Could change to 5 after 2021.12.31
+                    int threshold = 15;//to compatible with old version. Could change to 5 after 2021.12.31
+                    if (node.NodeId == ThisNodeID)
+                    {
+                        threshold = 1;
+                    }
+                    if (node.MissCount >= threshold)
                     {
                         logger.LogInformation($"Removing expired node:{node.NodeId}");
                         Task.Run(() => {
@@ -311,10 +316,8 @@ namespace NSPersonalCloud.LocalDiscovery
                             {
                                 _Network.Restart();
                             }
-
                             FireNodeRemovingEvent(node);
                         });
-
                         LocalNodes.RemoveAt(i);//todo: ping the node and then remove it
                         continue;
                     }
@@ -329,6 +332,7 @@ namespace NSPersonalCloud.LocalDiscovery
             }
             ++durationCount;
         }
+
 
         private void FireNodeRemovingEvent(LocalNodeInfo node)
         {

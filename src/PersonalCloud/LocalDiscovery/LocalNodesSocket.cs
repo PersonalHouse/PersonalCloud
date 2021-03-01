@@ -27,7 +27,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 so.ExclusiveAddressUse = false;
                 so.EnableBroadcast = true;
-                so.MulticastLoopback = true;
+                so.MulticastLoopback = false;
                 switch (localaddress.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:
@@ -93,6 +93,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 so.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 so.ExclusiveAddressUse = false;
                 so.EnableBroadcast = true;
+                so.MulticastLoopback = false;
                 switch (localaddress.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:
