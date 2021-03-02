@@ -195,9 +195,10 @@ namespace NSPersonalCloud.LocalDiscovery
                 {
                     return await httpclient.GetAsync(turi,HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    await Task.Delay(100 * retrycnt);
+                    logger.LogError(e, "GetNodeWebResp");
+                    //await Task.Delay(100 * retrycnt);
                 }
 
             }
