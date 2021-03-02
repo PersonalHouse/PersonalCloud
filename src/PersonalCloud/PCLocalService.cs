@@ -649,57 +649,13 @@ namespace NSPersonalCloud
 
             LoadApps();
         }
-// 
-// 
-//         public void StartNetwork(bool forcerestart)
-//         {
-//             if (forcerestart || (WebServer == null) || (WebServer.State != WebServerState.Listening) || (_LocalNodes.State != LocalDiscovery.NodeDiscoveryState.Listening))
-//             {
-//                 InitWebServer();
-//                 _LocalNodes?.Dispose();
-//                 _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
-//             }
-//             else
-//             {
-//                 using var cts = new CancellationTokenSource(500);
-//                 try
-//                 {
-//                     using var resp = httpclient.GetAsync($"http://127.0.0.1:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
-//                 }
-//                 catch
-//                 {
-//                     InitWebServer();
-//                     _LocalNodes?.Dispose();
-//                     _LocalNodes = new LocalDiscovery.LocalNodeRecords(loggerFactory);
-//                 }
-//             }
-// 
-//             _LocalNodes.Start(ServerPort, NodeId);
-//         }
-// 
-//         public void StopNetwork()
-//         {
-//             _LocalNodes?.Dispose();
-//             _LocalNodes = null;
-//             WebServer?.Listener?.Stop();
-//             WebServer?.Dispose();
-//             WebServer = null;
-//         }
-
-        //republish cloud info to network
-        //if force equals true, Sockets will be reinitialized.
-        //         public void NetworkRefeshNodes(bool force=false)
-        //         {
-        //             _LocalNodes.StartPublish(ServerPort, NodeId,force);
-        //             _LocalNodes.StartSearch();
-        //         }
 
         public void NetworkMayChanged(bool besure)
         {
             _LocalNodes.LocalNetworkMayChanged(besure);
         }
 
-        public void TellNetworkIveChanged()
+        public void BroadcastingIveChanged()
         {
             _LocalNodes.TellNetworkIveChanged();
         }
