@@ -78,7 +78,7 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             LocalNodes = new List<LocalNodeInfo>();
             sharedPCs = new List<NodeShareInfo>();
-
+            
             BindPort = Definition.MulticastPort;
             TargetPort = new[] { Definition.MulticastPort };
             loggerFactory = logfac;
@@ -315,16 +315,20 @@ namespace NSPersonalCloud.LocalDiscovery
                     }
                     if (node.MissCount >= threshold)
                     {
-                        logger.LogInformation($"Removing expired node:{node.NodeId}");
-                        Task.Run(() => {
-                            if (node.NodeId == ThisNodeID)
-                            {
-                                _Network.Restart();
-                            }
-                            FireNodeRemovingEvent(node);
-                        });
-                        LocalNodes.RemoveAt(i);//todo: ping the node and then remove it
-                        continue;
+                        logger.LogTrace($"Removing expired node:{0}", node.NodeId);
+                        if (node.NodeId == ThisNodeID)
+                        {//restart network
+                            logger.LogInformation($"This node MissCount is {node.MissCount}");
+                            _Network.Restart();
+                        }
+                        else
+                        {//remove
+                            Task.Run(() => {
+                                FireNodeRemovingEvent(node);
+                            });
+                            LocalNodes.RemoveAt(i);//todo: ping the node and then remove it
+                            continue;
+                        }
                     }
                     Interlocked.Increment(ref node.MissCount);
                     i++;
@@ -463,6 +467,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 _Network.Start(BindPort, TargetPort, WebServerPort, ThisNodeID);
                 _BroadcastingTimer.Change(0, RepublicTime);
                 _Network.SendSearch(TargetPort);
+                AddSelf();
 
                 State = NodeDiscoveryState.Listening;
             }
@@ -473,8 +478,20 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
+        private void AddSelf()
+        {
+            Task.Run(() => {
+                var x = new NodeInfoInNet {
+                    NodeGuid = ThisNodeID,
+                    PCVersion = "2",
+                    TimeStamp = DateTime.UtcNow.ToFileTime(),
+                    Url = $"http://localhost:{WebServerPort}/"
+                };
+                NodeInfoForOneNode(x);
+            });
+        }
 
-        public void TellNetworkIveChanged()
+        public void BroadcastingIveChanged()
         {
             _Network.SendAnnounce(true);
         }

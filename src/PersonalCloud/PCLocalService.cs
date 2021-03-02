@@ -438,7 +438,7 @@ namespace NSPersonalCloud
                     }
                     if (updatenet)
                     {
-                        _LocalNodes.TellNetworkIveChanged();
+                        _LocalNodes.BroadcastingIveChanged();
                     }
                 }
 
@@ -560,7 +560,7 @@ namespace NSPersonalCloud
 
             EnsureWebServerStarted();
             EnsureLocalNetStarted();
-            _LocalNodes.TellNetworkIveChanged();
+            _LocalNodes.BroadcastingIveChanged();
 
             return pc;
         }
@@ -571,7 +571,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             var str = pc.GenerateShareCode();
-            _LocalNodes.TellNetworkIveChanged();
+            _LocalNodes.BroadcastingIveChanged();
             return str;
         }
 
@@ -582,7 +582,7 @@ namespace NSPersonalCloud
                 throw new InvalidDataException("pc couldn't be null");
             }
             pc.CurrentShareCode = null;
-            _LocalNodes.TellNetworkIveChanged();
+            _LocalNodes.BroadcastingIveChanged();
             return;
         }
 
@@ -620,7 +620,7 @@ namespace NSPersonalCloud
                         _PersonalClouds.Add(pc);
                     }
                     SavePCList();
-                    _LocalNodes.TellNetworkIveChanged();
+                    _LocalNodes.BroadcastingIveChanged();
                     _LocalNodes.SyncPCNodes(pc.Id);
                     return pc;
                 }
@@ -636,7 +636,7 @@ namespace NSPersonalCloud
                 _PersonalClouds.Remove(pc);
             }
             SavePCList();
-            _LocalNodes.TellNetworkIveChanged();
+            _LocalNodes.BroadcastingIveChanged();
         }
 
         #endregion
@@ -657,7 +657,7 @@ namespace NSPersonalCloud
 
         public void BroadcastingIveChanged()
         {
-            _LocalNodes.TellNetworkIveChanged();
+            _LocalNodes.BroadcastingIveChanged();
         }
 
 
