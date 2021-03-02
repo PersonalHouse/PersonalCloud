@@ -230,30 +230,37 @@ namespace NSPersonalCloud.LocalDiscovery
                 });
                 return (_SockertLayer.CreateClientSocket(x.Item1, x.Item2), endps);
             }).Where(x=>x.Item1!=null);
-            for (int i = 0; i < UdpSendCount; i++)
+            try
             {
-                foreach(var s in tosend)
+                for (int i = 0; i < UdpSendCount; i++)
                 {
-                    foreach (var p in s.Item2)
+                    foreach (var s in tosend)
                     {
-                        try
+                        foreach (var p in s.Item2)
                         {
-                            _ = _SockertLayer.SendTo(s.Item1,p, msg, 0, msg.Length);
-                        }
-                        finally
-                        {
+                            try
+                            {
+                                _ = _SockertLayer.SendTo(s.Item1, p, msg, 0, msg.Length);
+                            }
+                            finally
+                            {
+                            }
                         }
                     }
                 }
             }
-            foreach (var so in tosend)
+            finally
             {
-                try
+                foreach (var so in tosend)
                 {
-                    so.Item1.Dispose();
-                }
-                finally
-                {
+                    try
+                    {
+                        so.Item1.Close();
+                        so.Item1.Dispose();
+                    }
+                    finally
+                    {
+                    }
                 }
             }
         }
@@ -333,26 +340,32 @@ namespace NSPersonalCloud.LocalDiscovery
 
             }).Where(x => x.Item1 != null);
 
-
-            for (int i = 0; i < UdpSendCount; i++)
+            try
             {
-                foreach (var s in tosend)
+                for (int i = 0; i < UdpSendCount; i++)
                 {
-                    try
+                    foreach (var s in tosend)
                     {
-                        foreach (var endp in s.Item3)
+                        try
                         {
-                            SendMessage(s.Item1,s.Item2, endp);
+                            foreach (var endp in s.Item3)
+                            {
+                                SendMessage(s.Item1, s.Item2, endp);
+                            }
+                        }
+                        finally
+                        {
                         }
                     }
-                    finally
-                    {
-                    }
                 }
+            }
+            finally
+            {
                 foreach (var so in tosend)
                 {
                     try
                     {
+                        so.Item1.Close();
                         so.Item1.Dispose();
                     }
                     finally
@@ -360,6 +373,8 @@ namespace NSPersonalCloud.LocalDiscovery
                     }
                 }
             }
+
+
         }
 
         internal void SendSearch(int[] targetPort)

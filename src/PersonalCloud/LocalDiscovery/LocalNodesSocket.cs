@@ -94,6 +94,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 so.ExclusiveAddressUse = false;
                 so.EnableBroadcast = true;
                 so.MulticastLoopback = false;
+                so.Bind(new IPEndPoint(localaddress, 0));
                 switch (localaddress.AddressFamily)
                 {
                     case AddressFamily.InterNetwork:

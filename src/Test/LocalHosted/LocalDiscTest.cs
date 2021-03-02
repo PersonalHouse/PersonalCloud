@@ -26,7 +26,7 @@ namespace LocalHosted
                 var p = ran.Next(10000, 60000);
                 net.Start(p, id);
             }
-            //Thread.Sleep(1000000);
+            Thread.Sleep(1000000);
         }
 
     }
