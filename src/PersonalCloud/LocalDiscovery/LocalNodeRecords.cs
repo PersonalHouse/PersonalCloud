@@ -51,6 +51,7 @@ namespace NSPersonalCloud.LocalDiscovery
         public NodeDiscoveryState State { get; internal set; }
         public List<LocalNodeInfo> LocalNodes;
         public readonly List<NodeShareInfo> sharedPCs;
+        public HttpClient Httpclient;
 
         public event EventHandler<ErrorCode> OnError;
         public event EventHandler<LocalNodeUpdateEventArgs> OnNodeUpdate;//node guid,url
@@ -68,7 +69,6 @@ namespace NSPersonalCloud.LocalDiscovery
 
 
         ActionBlock<FetchQueueItem> fetchCloudInfo;
-        HttpClient httpclient;
         Subject<NodeInfoInNet> ReceivedNodeInfosSubject;
         Subject<Unit> rxduration;
         private int durationCount;
@@ -102,8 +102,8 @@ namespace NSPersonalCloud.LocalDiscovery
 
         private void SetupNodeInfoQueue()
         {
-            httpclient = new HttpClient();
-            httpclient.Timeout = TimeSpan.FromSeconds(15);
+            Httpclient = new HttpClient();
+            Httpclient.Timeout = TimeSpan.FromSeconds(15);
             fetchCloudInfo = new ActionBlock<FetchQueueItem>(GetNodeClodeInfo, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 3 });
             rxduration = new Subject<Unit>();
             ReceivedNodeInfosSubject = new Subject<NodeInfoInNet>();
@@ -193,7 +193,7 @@ namespace NSPersonalCloud.LocalDiscovery
             {
                 try
                 {
-                    return await httpclient.GetAsync(turi,HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+                    return await Httpclient.GetAsync(turi,HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
@@ -557,8 +557,8 @@ namespace NSPersonalCloud.LocalDiscovery
                     ReceivedNodeInfosSubject = null;
                     rxduration?.Dispose();
                     rxduration = null;
-                    httpclient?.Dispose();
-                    httpclient = null;
+                    Httpclient?.Dispose();
+                    Httpclient = null;
                 }
 
             }

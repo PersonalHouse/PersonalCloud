@@ -521,7 +521,20 @@ namespace NSPersonalCloud
         {
             if (WebServer.State != WebServerState.Listening)
             {
-                WebServer.Start();
+                InitWebServer();
+            } 
+            else
+            {
+                using var cts = new CancellationTokenSource(500);
+                try
+                {
+                    using var resp = _LocalNodes.Httpclient.GetAsync($"http://localhost:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
+                }
+                catch
+                {
+                    InitWebServer();
+                    _LocalNodes.LocalNetworkMayChanged(true);
+                }
             }
         }
 
@@ -652,6 +665,7 @@ namespace NSPersonalCloud
 
         public void NetworkMayChanged(bool besure)
         {
+            EnsureWebServerStarted();
             _LocalNodes.LocalNetworkMayChanged(besure);
         }
 
