@@ -415,7 +415,6 @@ namespace NSPersonalCloud
                 catch (Exception e)
                 {
                     _ = e.Message;
-                    Console.WriteLine(e.Message);
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 }
             }
