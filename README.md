@@ -21,6 +21,6 @@ See the following chart
 
 
 ## License
-For personal usage, Personal cloud is licensed under the [GPLv3](https://raw.githubusercontent.com/Personal-Cloud/PersonalCloud/master/LICENSE "GPLv3")  license. For business/commercial usage, please contact us.
+For personal usage, Personal cloud is licensed under the [GPLv3](https://raw.githubusercontent.com/Personal-Cloud/PersonalCloud/master/LICENSE "GPLv3")  license. For the other usages, please contact us.
 
 
