@@ -484,7 +484,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 var x = new NodeInfoInNet {
                     NodeGuid = ThisNodeID,
                     PCVersion = "2",
-                    TimeStamp = DateTime.UtcNow.ToFileTime(),
+                    TimeStamp = _Network.StatusTimeStamp,
                     Url = $"http://localhost:{WebServerPort}/"
                 };
                 NodeInfoForOneNode(x);

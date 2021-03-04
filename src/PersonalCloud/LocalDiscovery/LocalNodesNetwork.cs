@@ -35,7 +35,7 @@ namespace NSPersonalCloud.LocalDiscovery
         int _WebServerPort;
         int[] _TargetPort;
         string _ThisNodeID;
-        long _StatusTimeStamp;
+        public long StatusTimeStamp;
 
         Socket _ListenSocketV4;
         Socket _ListenSocketV6;
@@ -67,7 +67,7 @@ namespace NSPersonalCloud.LocalDiscovery
             responseNodeCache = new Dictionary<string, long>();
 
 
-            _StatusTimeStamp = DateTime.UtcNow.ToFileTime();
+            StatusTimeStamp = DateTime.UtcNow.ToFileTime();
         }
 
         #region List local ips
@@ -277,7 +277,7 @@ namespace NSPersonalCloud.LocalDiscovery
         {
             if (forceupdateinfo)
             {
-                ++_StatusTimeStamp;
+                Interlocked.Increment(ref StatusTimeStamp);
             }
             SendAnnounceOrSearchResponse(NetworkPacketOperations.Announce);
         }
@@ -305,7 +305,7 @@ namespace NSPersonalCloud.LocalDiscovery
                     var node = new NodeInfoInNet {
                         NodeGuid = _ThisNodeID,
                         PCVersion = Definition.CloudVersion.ToString(CultureInfo.InvariantCulture),
-                        TimeStamp = _StatusTimeStamp,
+                        TimeStamp = StatusTimeStamp,
                         Url = url,
                     };
                     var AnnounceString = JsonConvert.SerializeObject(node);
@@ -408,7 +408,7 @@ namespace NSPersonalCloud.LocalDiscovery
         internal void Restart()
         {
             logger.LogInformation($"Restarting local network. {_ThisNodeID}");
-            ++_StatusTimeStamp;
+            Interlocked.Increment(ref StatusTimeStamp);
             InitListenSockets();
         }
 
