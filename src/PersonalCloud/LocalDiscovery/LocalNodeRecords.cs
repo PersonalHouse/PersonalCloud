@@ -467,7 +467,7 @@ namespace NSPersonalCloud.LocalDiscovery
                 _Network.Start(BindPort, TargetPort, WebServerPort, ThisNodeID);
                 _BroadcastingTimer.Change(0, RepublicTime);
                 _Network.SendSearch(TargetPort);
-                AddSelf();
+                RefreshSelfNode();
 
                 State = NodeDiscoveryState.Listening;
             }
@@ -478,7 +478,7 @@ namespace NSPersonalCloud.LocalDiscovery
             }
         }
 
-        private void AddSelf()
+        private void RefreshSelfNode()
         {
             Task.Run(() => {
                 var x = new NodeInfoInNet {
@@ -494,6 +494,7 @@ namespace NSPersonalCloud.LocalDiscovery
         public void BroadcastingIveChanged()
         {
             _Network.SendAnnounce(true);
+            RefreshSelfNode();//on 4g network, multicasting packets couldn't be received.
         }
         public void SyncPCNodes(string PcId)
         {
