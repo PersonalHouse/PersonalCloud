@@ -145,29 +145,36 @@ namespace NSPersonalCloud
 
         void InitWebServer()
         {
-            if (WebServer != null)
+            try
             {
-                WebServer.Dispose();
-                WebServer = null;
-            }
-            var curpath = Path.GetDirectoryName(typeof(PCLocalService).Assembly.Location);
-            WebServer = new WebServer(ServerPort);
-            WebServer = WebServer
-                .WithModule(new PCWebServerAuth("/api/share", this))
-                .WithWebApi("SSDP", "/clouds", EmbedIOResponseSerializerCallback, module => module.WithController(CreateSSDPServiceController))
-                .WithWebApi("Share", "/api/share", EmbedIOResponseSerializerCallback, module => module.WithController(CreateShareController));
-            if (!string.IsNullOrWhiteSpace(ExtraWebPath))
-            {
-                WebServer = WebServer.WithStaticFolder("/AppsStatic", ExtraWebPath, false);
-            }
-            var apps = GetAppMgrs();
-            foreach (var appmgr in apps)
-            {
-                var id = appmgr.GetAppId();
-                WebServer = appmgr.ConfigWebController(id, $"/api/Apps/{id}", WebServer);
+                if (WebServer != null)
+                {
+                    WebServer.Dispose();
+                    WebServer = null;
+                }
+                var curpath = Path.GetDirectoryName(typeof(PCLocalService).Assembly.Location);
+                WebServer = new WebServer(ServerPort);
+                WebServer = WebServer
+                    .WithModule(new PCWebServerAuth("/api/share", this))
+                    .WithWebApi("SSDP", "/clouds", EmbedIOResponseSerializerCallback, module => module.WithController(CreateSSDPServiceController))
+                    .WithWebApi("Share", "/api/share", EmbedIOResponseSerializerCallback, module => module.WithController(CreateShareController));
+                if (!string.IsNullOrWhiteSpace(ExtraWebPath))
+                {
+                    WebServer = WebServer.WithStaticFolder("/AppsStatic", ExtraWebPath, false);
+                }
+                var apps = GetAppMgrs();
+                foreach (var appmgr in apps)
+                {
+                    var id = appmgr.GetAppId();
+                    WebServer = appmgr.ConfigWebController(id, $"/api/Apps/{id}", WebServer);
 
+                }
+                WebServer.Start();
             }
-            WebServer.Start();
+            catch (Exception e)
+            {
+                logger.LogError(e, "Exception in InitWebServer");
+            }
 
         }
 
@@ -530,8 +537,9 @@ namespace NSPersonalCloud
                 {
                     using var resp = _LocalNodes.Httpclient.GetAsync($"http://localhost:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
                 }
-                catch
+                catch(Exception e)
                 {
+                    logger.LogInformation("Exception in _LocalNodes.Httpclient.GetAsync, reset sockets");
                     InitWebServer();
                     _LocalNodes.LocalNetworkMayChanged(true);
                 }

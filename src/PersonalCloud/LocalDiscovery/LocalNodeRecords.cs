@@ -518,16 +518,28 @@ namespace NSPersonalCloud.LocalDiscovery
 
         internal void LocalNetworkMayChanged(bool besure)
         {
-            if(besure)
+            if (string.IsNullOrWhiteSpace(ThisNodeID))//not inited yet
             {
-                _Network.Restart();
+                logger.LogError("LocalNetworkMayChanged call before inited");
+                return;
             }
-            else
+            try
             {
-                _Network.EnsureListenSocketFine();
+                if (besure)
+                {
+                    _Network.Restart();
+                }
+                else
+                {
+                    _Network.EnsureListenSocketFine();
+                }
+                _Network.SendSearch(TargetPort);
+                _Network.SendAnnounce(false);
             }
-            _Network.SendSearch(TargetPort);
-            _Network.SendAnnounce(false);
+            catch (Exception e)
+            {
+                logger.LogError(e, "Exception in LocalNetworkMayChanged");
+            }
         }
 
 
