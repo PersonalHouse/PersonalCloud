@@ -7,39 +7,46 @@ namespace NSPersonalCloud.Apps.Album.ImageIndexer
     {
         private static async Task Main(string[] args)
         {
-            SQLitePCL.Batteries_V2.Init();
-
-            string indexpath = null;
-            string inputfolder = null;
-            for (int i = 0; i < args.Length; i++)
+            try
             {
-                switch (args[i])
+                SQLitePCL.Batteries_V2.Init();
+
+                string indexpath = null;
+                string inputfolder = null;
+                for (int i = 0; i < args.Length; i++)
                 {
-                    case "-O"://output
-                        indexpath = args[++i];
-                        break;
+                    switch (args[i])
+                    {
+                        case "-O"://output
+                            indexpath = args[++i];
+                            break;
 
-                    case "-I":
-                        inputfolder = args[++i];
-                        break;
+                        case "-I":
+                            inputfolder = args[++i];
+                            break;
 
-                    default:
-                        OutputUsage();
-                        return;
+                        default:
+                            OutputUsage();
+                            return;
+                    }
                 }
+                if (string.IsNullOrWhiteSpace(indexpath) || string.IsNullOrWhiteSpace(inputfolder))
+                {
+                    Console.WriteLine($"Input indexpath is {indexpath}, inputfolder is {inputfolder}");
+                    Console.WriteLine("Input empty path");
+                    OutputUsage();
+                    return;
+                }
+                var ts = DateTime.UtcNow.ToFileTime();
+                using var idx = new ImgIndexer(indexpath);
+                await idx.Scan(inputfolder, ts).ConfigureAwait(false);
+                idx.CleanNotExistImages(ts);
+                await idx.SaveYearMonthDays().ConfigureAwait(false);
             }
-            if (string.IsNullOrWhiteSpace(indexpath) || string.IsNullOrWhiteSpace(inputfolder))
+            catch (Exception e)
             {
-                Console.WriteLine($"Input indexpath is {indexpath}, inputfolder is {inputfolder}");
-                Console.WriteLine("Input empty path");
-                OutputUsage();
-                return;
+                Console.WriteLine($"Exception in main. {e.Message} {e.StackTrace}");
             }
-            var ts = DateTime.UtcNow.ToFileTime();
-            using var idx = new ImgIndexer(indexpath);
-            await idx.Scan(inputfolder, ts).ConfigureAwait(false);
-            idx.CleanNotExistImages(ts);
-            await idx.SaveYearMonthDays().ConfigureAwait(false);
         }
 
         private static void OutputUsage()
