@@ -80,12 +80,16 @@ namespace NSPersonalCloud.RootFS
                 else throw new DeviceNotFoundException();
             }
             return new ValueTask<List<FileSystemEntry>>(ClientList.Select(x => {
-                var entry = new FileSystemEntry {
+                var entry = new TopFileSystemEntry {
                     Name = x.Key,
-                    Attributes = FileAttributes.Directory | FileAttributes.Device
+                    Attributes = FileAttributes.Directory | FileAttributes.Device,
                 };
-                if (x.Value.GetType() == typeof(TopFolderClient)) entry.Attributes = entry.Attributes | FileAttributes.ReadOnly;
-                return entry;
+                if (x.Value is TopFolderClient top)
+                {
+                    entry.Attributes = entry.Attributes | FileAttributes.ReadOnly;
+                    entry.NodeId = top.NodeId;
+                }
+                return entry as FileSystemEntry;
             }).ToList());
         }
 
