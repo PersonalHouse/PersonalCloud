@@ -11,7 +11,7 @@ namespace NSPersonalCloud.Interfaces.FileSystem
     {
 
         /// <summary>
-        /// File attributes (hidden, etc.)
+        /// Node Id/Device Id
         /// </summary>
         public string NodeId { get; set; }
     }

@@ -44,6 +44,21 @@ namespace NSPersonalCloud.Interfaces.FileSystem
         /// </summary>
         public FileAttributes Attributes { get; set; }
 
+
+        /// <summary>
+        /// DisplayName
+        /// </summary>
+        public string DisplayName
+        {
+            get {
+                return _displayName ?? Name;
+            }
+            set {
+                _displayName = value;
+            }
+        }
+        string _displayName;
+
         #region Utility
 
         /// <summary>
