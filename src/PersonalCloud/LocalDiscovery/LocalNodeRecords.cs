@@ -465,9 +465,12 @@ namespace NSPersonalCloud.LocalDiscovery
                 ThisNodeID = thisnodeid;
 
                 _Network.Start(BindPort, TargetPort, WebServerPort, ThisNodeID);
-                _BroadcastingTimer.Change(0, RepublicTime);
                 _Network.SendSearch(TargetPort);
+                _Network.SendAnnounce(true);
                 RefreshSelfNode();
+                _BroadcastingTimer.Change(RepublicTime, RepublicTime);
+
+                _Network.SendSearch(TargetPort);
 
                 State = NodeDiscoveryState.Listening;
             }

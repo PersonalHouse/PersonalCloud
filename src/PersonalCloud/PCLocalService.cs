@@ -58,7 +58,7 @@ namespace NSPersonalCloud
         WebServer WebServer;
 
         private SSDPServiceController CreateSSDPServiceController() => new SSDPServiceController(this);
-        public ShareController CreateShareController() => new ShareController(_FileSystem, this);
+        public ShareController CreateShareController() => new ShareController(_FileSystem, this, loggerFactory.CreateLogger<ShareController>());
         Zio.IFileSystem _FileSystem;
         public Zio.IFileSystem FileSystem
         {
@@ -523,8 +523,12 @@ namespace NSPersonalCloud
         #endregion
 
 
-
-        private void EnsureWebServerStarted()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="alsoresetnet"></param>
+        /// <returns> whether network has been reset</returns>
+        private void EnsureNetworkStarted()
         {
             if (WebServer.State != WebServerState.Listening)
             {
@@ -537,25 +541,24 @@ namespace NSPersonalCloud
                 {
                     using var resp = _LocalNodes.Httpclient.GetAsync($"http://localhost:{ServerPort}/", HttpCompletionOption.ResponseHeadersRead, cts.Token).Result;
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     logger.LogInformation("Exception in _LocalNodes.Httpclient.GetAsync, reset sockets");
                     InitWebServer();
                     _LocalNodes.LocalNetworkMayChanged(true);
+                    return;
                 }
             }
-        }
-
-        private void EnsureLocalNetStarted()
-        {
             if (_LocalNodes.State != NSPersonalCloud.LocalDiscovery.NodeDiscoveryState.Listening)
             {
                 _LocalNodes.Start(ServerPort, NodeId);
-            }else
+            }
+            else
             {
                 _LocalNodes.LocalNetworkMayChanged(false);
             }
         }
+
         #region Local cloud operations
 
         public PersonalCloud CreatePersonalCloud(string displayName, string nodedisplaryname)
@@ -579,8 +582,7 @@ namespace NSPersonalCloud
             }
             SavePCList();
 
-            EnsureWebServerStarted();
-            EnsureLocalNetStarted();
+            EnsureNetworkStarted();
             _LocalNodes.BroadcastingIveChanged();
 
             return pc;
@@ -665,16 +667,16 @@ namespace NSPersonalCloud
         public void StartService()
         {
             logger.LogInformation("StartService");
-            EnsureWebServerStarted();
-            EnsureLocalNetStarted();
+
+            InitWebServer();
+            _LocalNodes.Start(ServerPort, NodeId);
 
             LoadApps();
         }
 
         public void NetworkMayChanged(bool besure)
         {
-            EnsureWebServerStarted();
-            _LocalNodes.LocalNetworkMayChanged(besure);
+            EnsureNetworkStarted();
         }
 
         public void BroadcastingIveChanged()

@@ -115,7 +115,7 @@ namespace NSPersonalCloud.LocalDiscovery
                     default:
                         throw new InvalidOperationException($"address is {localaddress.AddressFamily}");
                 }
-                so.Ttl = 5;
+                so.Ttl = 15;
                 return so;
             }
             catch (Exception exception)

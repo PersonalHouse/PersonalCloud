@@ -11,6 +11,8 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 
+using Microsoft.Extensions.Logging;
+
 using Newtonsoft.Json;
 
 using NSPersonalCloud.FileSharing;
@@ -27,8 +29,10 @@ namespace NSPersonalCloud
     {
         private readonly Zio.IFileSystem fileSystem;
         IPCService pCService;
-        public ShareController(Zio.IFileSystem fs, IPCService pcService)
+        ILogger logger;
+        public ShareController(Zio.IFileSystem fs, IPCService pcService,ILogger l)
         {
+            logger = l;
             pCService = pcService;
             fileSystem = fs;
         }
@@ -55,33 +59,39 @@ namespace NSPersonalCloud
                 var children = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute()).ToList();
                 SendJsonResponse(children.Select(x => new Interfaces.FileSystem.FileSystemEntry(x)));
             }
-            catch (NotSupportedException)
+            catch (NotSupportedException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotImplemented).ConfigureAwait(false);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (NotReadyException)
+            catch (NotReadyException e)
             {
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                _ = e.Message;
+                logger.LogError(e, "Exception in EnumerateAllChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -95,28 +105,34 @@ namespace NSPersonalCloud
                 var children = fileSystem.EnumerateFileSystemEntries((new UPath(path)).ToAbsolute(), data.SearchPattern);
                 SendJsonResponse(children.Select(x => new Interfaces.FileSystem.FileSystemEntry(x)).Skip(data.PageIndex).Take(data.PageSize));
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (NotReadyException)
+            catch (NotReadyException e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in EnumerateChildren");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -130,34 +146,39 @@ namespace NSPersonalCloud
                 var nodeInfo = fileSystem.GetFileSystemEntry(fn);
                 SendJsonResponse(new Interfaces.FileSystem.FileSystemEntry(nodeInfo));
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (NotReadyException)
+            catch (NotReadyException e)
             {
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                _ = e.Message;
-                Console.WriteLine($"exception in ReadMetadata {e.Message} {e.StackTrace}");
+                logger.LogError(e, "Exception in ReadMetadata");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -174,28 +195,34 @@ namespace NSPersonalCloud
                 };
                 SendJsonResponse(info);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (NotReadyException)
+            catch (NotReadyException e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in GetVolumeFreespace");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -207,20 +234,24 @@ namespace NSPersonalCloud
             {
                 fileSystem.CreateDirectory((new UPath(path)).ToAbsolute());
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in CreateFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in CreateFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in CreateFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in CreateFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -267,27 +298,32 @@ namespace NSPersonalCloud
                 }
                 catch (InvalidOperationException e)
                 {
-                    _ = e.Message;
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
-                catch (SecurityException)
+                catch (SecurityException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
-                catch (FileNotFoundException)
+                catch (FileNotFoundException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
                 }
-                catch (NotReadyException)
+                catch (NotReadyException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
                 }
-                catch
+                catch (Exception e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 }
             }
@@ -309,28 +345,32 @@ namespace NSPersonalCloud
                 }
                 catch (InvalidOperationException e)
                 {
-                    _ = e.Message;
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
-                catch (SecurityException)
+                catch (SecurityException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
-                catch (FileNotFoundException)
+                catch (FileNotFoundException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
                 }
-                catch (NotReadyException)
+                catch (NotReadyException e)
                 {
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.TooManyRequests).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    _ = e.Message;
+                    logger.LogError(e, "Exception in ReadFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 }
             }
@@ -356,20 +396,22 @@ namespace NSPersonalCloud
             }
             catch (InvalidOperationException e)
             {
-                Console.WriteLine($"CreateFile {e.Message} {e.StackTrace}");
+                logger.LogError(e, "Exception in CreateFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in CreateFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in CreateFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                _ = e.Message;
+                logger.LogError(e, "Exception in CreateFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -400,21 +442,24 @@ namespace NSPersonalCloud
                     dest.Seek(from, SeekOrigin.Begin);
                     await CopyStreamAsync(stream, dest, to - from + 1).ConfigureAwait(false);
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException e)
                 {
+                    logger.LogError(e, "Exception in WriteFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException e)
                 {
+                    logger.LogError(e, "Exception in WriteFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
-                catch (SecurityException)
+                catch (SecurityException e)
                 {
+                    logger.LogError(e, "Exception in WriteFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
                 }
                 catch (Exception e)
                 {
-                    _ = e.Message;
+                    logger.LogError(e, "Exception in WriteFile");
                     await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 }
             }
@@ -432,28 +477,34 @@ namespace NSPersonalCloud
                 using var dest = fileSystem.OpenFile((new UPath(path)).ToAbsolute(), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
                 dest.SetLength(length);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in SetFileLength");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -465,28 +516,34 @@ namespace NSPersonalCloud
             {
                 fileSystem.SetAttributes((new UPath(path)).ToAbsolute(), (FileAttributes) attributes);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in SetFileAttributes");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -512,28 +569,34 @@ namespace NSPersonalCloud
                     fileSystem.SetLastWriteTime((new UPath(path)).ToAbsolute(), write.Value);
                 }
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in SetFileTime");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -553,28 +616,34 @@ namespace NSPersonalCloud
                     fileSystem.MoveFile((new UPath(path)).ToAbsolute(), (new UPath(newName)).ToAbsolute() );
                 }
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in Move");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -586,24 +655,29 @@ namespace NSPersonalCloud
             {
                 fileSystem.DeleteFile((new UPath(path)).ToAbsolute());
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in DeleteFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in DeleteFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in DeleteFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (FileNotFoundException)
+            catch (FileNotFoundException e)
             {
+                logger.LogError(e, "Exception in DeleteFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in DeleteFile");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -618,24 +692,29 @@ namespace NSPersonalCloud
                     fileSystem.DeleteDirectory((new UPath(path)).ToAbsolute(), true);
                 }
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
+                logger.LogError(e, "Exception in DeleteFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.BadRequest).ConfigureAwait(false);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException e)
             {
+                logger.LogError(e, "Exception in DeleteFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (SecurityException)
+            catch (SecurityException e)
             {
+                logger.LogError(e, "Exception in DeleteFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.Forbidden).ConfigureAwait(false);
             }
-            catch (DirectoryNotFoundException)
+            catch (DirectoryNotFoundException e)
             {
+                logger.LogError(e, "Exception in DeleteFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.NotFound).ConfigureAwait(false);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in DeleteFolder");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
             }
         }
@@ -662,8 +741,9 @@ namespace NSPersonalCloud
                 }
                 return PersonalCloudInfo.FromPersonalCloud(pc);
             }
-            catch
+            catch (Exception e)
             {
+                logger.LogError(e, "Exception in GetCloudInfo");
                 await HttpContext.SendStandardHtmlAsync((int) HttpStatusCode.InternalServerError).ConfigureAwait(false);
                 return null;
             }
