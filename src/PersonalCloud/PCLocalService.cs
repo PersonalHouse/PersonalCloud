@@ -105,7 +105,7 @@ namespace NSPersonalCloud
             {
                 item.ResyncClientList();
             }
-            InitWebServer();
+            //InitWebServer();
 
         }
 
