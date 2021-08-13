@@ -320,6 +320,7 @@ namespace NSPersonalCloud.LocalDiscovery
                         {//restart network
                             logger.LogInformation($"This node MissCount is {node.MissCount}");
                             _Network.Restart();
+                            Interlocked.Exchange(ref node.MissCount, 0);
                         }
                         else
                         {//remove
