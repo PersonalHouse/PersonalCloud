@@ -17,7 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="sqlite-net-base" Version="1.7.335" />
     <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.0.4" />
     <PackageReference Include="System.Text.Json" Version="5.0.1" />
